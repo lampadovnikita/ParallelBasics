@@ -80,7 +80,4 @@ int main()
     delete[] thread_arr;
     
 	pthread_exit(NULL);
-    
-    
-    
 }
