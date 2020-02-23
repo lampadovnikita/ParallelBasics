@@ -14,11 +14,15 @@ struct thread_args {
 	unsigned int operation_count;
 	// Нужно ли выводить в консоль информацию об атрибутах потока
 	bool print_attrs;
+
+	chrono::microseconds work_time;
 };
 
 // Функция, которую будет исполнять созданный поток
 void* thread_job(void* arg)
 {
+	auto begin = chrono::steady_clock::now();
+
 	int err;
 
 	// Преобразуем аргументы к нужному типу
@@ -97,6 +101,11 @@ void* thread_job(void* arg)
 		cout << "Stack size: " << stack_size << endl;
 	}
 	
+	auto end = chrono::steady_clock::now();
+
+	auto elapsed_time = chrono::duration_cast<std::chrono::microseconds>(end - begin);
+	param->work_time = elapsed_time;
+
 	return NULL;
 }
 
@@ -143,10 +152,11 @@ int main(int argc, char* argv[])
 		
 		auto end = chrono::steady_clock::now();
 
-		auto elapsed_time = chrono::duration_cast<std::chrono::milliseconds>(end - begin);
+		auto elapsed_time = chrono::duration_cast<std::chrono::microseconds>(end - begin);
 
 		cout << "With " << targs.operation_count << " operations" << endl
-		     << "Thread was running: (chrono)" << elapsed_time.count() << " ms" << endl
+			 << "Thread was running: (inner time)" << targs.work_time.count() << " us" << endl
+		     << "                    (outer time)" << elapsed_time.count() << " us" << endl
 			 << "=====================================" << endl;
 		
 		targs.operation_count *= 20;
