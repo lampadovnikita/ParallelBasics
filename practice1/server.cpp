@@ -8,27 +8,21 @@
 #include <arpa/inet.h>
 #include <err.h>
 #include <string.h>
-char response_first[] = "HTTP/1.1 200 OK\r\n"
-"Content-Type: text/html; charset=UTF-8\r\n\r\n"
-"Request number ";
-char response_second[] = " has been processed\r\n";
- 
-void build_response_str(char* str, int request_number) {
-    // strcpy(str, response_first);
-    // itoa(request_number)
-    // strcat(str, response_second);
 
-    snprintf(str, 150, "HTTP/1.1 200 OK\r\n"
-                       "Content-Type: text/html; charset=UTF-8\r\n\r\n"
-                       "Request number %d has been processed",
-                       request_number);
+void build_response_str(char* str, int request_number) {
+    snprintf(
+        str,
+        150,
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html; charset=UTF-8\r\n\r\n"
+        "Request number %d has been processed",
+        request_number
+    );
 }
 
 int main()
 {
     char response_buf[150];
-
-    int request_number = 1;
 
     int one = 1, client_fd;
     struct sockaddr_in svr_addr, cli_addr;
@@ -50,7 +44,8 @@ int main()
         close(sock);
         err(1, "Can't bind");
     }
-    
+
+    int request_number = 1;
     listen(sock, 100);
     while (1) {
         client_fd = accept(sock, (struct sockaddr *) &cli_addr, &sin_len);
