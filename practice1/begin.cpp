@@ -11,10 +11,10 @@ struct thread_args {
 	// Имя потока
 	char name[20];
 	// Количество однотипных операций внутри потока
-	unsigned int operation_count;
+	unsigned int operations_count;
 	// Нужно ли выводить в консоль информацию об атрибутах потока
-	bool print_attrs;
-
+	bool enable_cout;
+	// Время работы внутри потока
 	chrono::microseconds work_time;
 };
 
@@ -34,7 +34,7 @@ void* thread_job(void* arg)
 	}
 
 	// Из структуры аргумента получаем число операций
-	int operation_count = param->operation_count;
+	int operation_count = param->operations_count;
 
 	double number = 1.0;
 	for (unsigned int i = 0; i < operation_count; i++) {
@@ -42,7 +42,7 @@ void* thread_job(void* arg)
 	}
 
 	// Если необходимо, то выводим информацию об атрибутах потока
-	if (param->print_attrs == true) {
+	if (param->enable_cout == true) {
 		// Получаем индентефикатор текущего потока
 		pthread_t thread;
 		thread = pthread_self();
@@ -125,9 +125,9 @@ int main(int argc, char* argv[])
 	// Инициализируем структуру-аргумент
 	thread_args targs;
 	// Начальное число операций
-	targs.operation_count = 1000;
+	targs.operations_count = 1000;
 	// Не будем выводить информацию об атрибутах, т.к. это занимает время
-	targs.print_attrs = false;
+	targs.enable_cout = false;
 	
 	// Последовательно запускаем заданное число потоков
 	// с возрастающим числом операций
@@ -154,12 +154,12 @@ int main(int argc, char* argv[])
 
 		auto elapsed_time = chrono::duration_cast<std::chrono::microseconds>(end - begin);
 
-		cout << "With " << targs.operation_count << " operations" << endl
+		cout << "With " << targs.operations_count << " operations" << endl
 			 << "Thread was running: (inner time)" << targs.work_time.count() << " us" << endl
 		     << "                    (outer time)" << elapsed_time.count() << " us" << endl
 			 << "=====================================" << endl;
 		
-		targs.operation_count *= 20;
+		targs.operations_count *= 20;
 	}
 
 	// Проинициализируем переменную для хранения атрибутов потока
@@ -181,9 +181,9 @@ int main(int argc, char* argv[])
 	}
 
 	// Поток создан только для вывода информации о нём
-	targs.operation_count = 0;
+	targs.operations_count = 0;
 	// Установим необходимость вывода информации об атрибутах потока
-	targs.print_attrs = true;
+	targs.enable_cout = true;
 	// Зададим имя
 	strcpy(targs.name, "MyThread");
 
