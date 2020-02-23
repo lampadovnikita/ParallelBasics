@@ -6,9 +6,6 @@
 
 using namespace std;
 
-// Количество потоков
-const unsigned int THREADS_COUNT = 5;
-
 // Структура, передаваемая в качестве аргумента потока
 struct thread_args {
 	// Имя потока
@@ -103,8 +100,16 @@ void* thread_job(void* arg)
 	return NULL;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+	if (argc < 2) {
+		cout << "Not enough arguments" << endl;
+		return 0;
+	}
+	
+	// Количество потоков
+	int threads_count = atoi(argv[1]);
+
 	pthread_t thread;
 	int err;
 
@@ -117,7 +122,7 @@ int main()
 	
 	// Последовательно запускаем заданное число потоков
 	// с возрастающим числом операций
-	for (int i = 0; i < THREADS_COUNT; i++) {
+	for (int i = 0; i < threads_count; i++) {
 		auto begin = chrono::steady_clock::now();
 
 		// Создаём поток
@@ -165,6 +170,8 @@ int main()
 		exit(-1);
 	}
 
+	// Поток создан только для вывода информации о нём
+	targs.operation_count = 0;
 	// Установим необходимость вывода информации об атрибутах потока
 	targs.print_attrs = true;
 	// Зададим имя
