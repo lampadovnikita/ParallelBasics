@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 		auto begin = chrono::steady_clock::now();
 
 		// Создаём поток
-		err = pthread_create(&thread, NULL, thread_job, (void *) &targs);
+		err = pthread_create(&thread, NULL, thread_job, (void*) &targs);
 		// Если при создании потока произошла ошибка, выводим
 		// сообщение об ошибке и прекращаем работу программы
 		if (err != 0) {
@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
 	strcpy(targs.name, "MyThread");
 
 	// Создаём поток с нестандартными атрибутами
-	err = pthread_create(&thread, &thread_attr, thread_job, (void *) &targs);
+	err = pthread_create(&thread, &thread_attr, thread_job, (void*) &targs);
 	if (err != 0)
 	{
 		cout << "Cannot create a thread: " << strerror(err) << endl;
