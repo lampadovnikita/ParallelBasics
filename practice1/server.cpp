@@ -7,24 +7,37 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <err.h>
- 
-char response[] = "HTTP/1.1 200 OK\r\n"
+#include <string.h>
+char response_first[] = "HTTP/1.1 200 OK\r\n"
 "Content-Type: text/html; charset=UTF-8\r\n\r\n"
-"<!DOCTYPE html><html><head><title>Bye-bye baby bye-bye</title>"
-"<style>body { background-color: #111 }"
-"h1 { font-size:4cm; text-align: center; color: black;"
-" text-shadow: 0 0 2mm red}</style></head>"
-"<body><h1>Goodbye, world!</h1></body></html>\r\n";
+"Request number ";
+char response_second[] = " has been processed\r\n";
  
+void build_response_str(char* str, int request_number) {
+    // strcpy(str, response_first);
+    // itoa(request_number)
+    // strcat(str, response_second);
+
+    snprintf(str, 150, "HTTP/1.1 200 OK\r\n"
+                       "Content-Type: text/html; charset=UTF-8\r\n\r\n"
+                       "Request number %d has been processed",
+                       request_number);
+}
+
 int main()
 {
+    char response_buf[150];
+
+    int request_number = 1;
+
     int one = 1, client_fd;
     struct sockaddr_in svr_addr, cli_addr;
     socklen_t sin_len = sizeof(cli_addr);
     
     int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0)
+    if (sock < 0) {
         err(1, "can't open socket");
+    }
     
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int));
     
@@ -44,11 +57,15 @@ int main()
         printf("got connection\n");
     
         if (client_fd == -1) {
-        perror("Can't accept");
-        continue;
+            perror("Can't accept");
+            continue;
         }
-    
-        write(client_fd, response, sizeof(response) - 1); /*-1:'\0'*/
+
+        build_response_str(response_buf, request_number);
+        request_number++;    
+        
+        write(client_fd, response_buf, strlen(response_buf) * sizeof(char)); /*-1:'\0'*/
+        
         shutdown(client_fd, SHUT_WR);
     }
 }
