@@ -22,11 +22,13 @@ struct thread_args {
 // Функция, которую будет исполнять созданный поток
 void* thread_job(void* arg)
 {
+	int err;
+
 	// Преобразуем аргументы к нужному типу
 	thread_args *param = (thread_args *) arg;
 	// Если не было передано аргументов, то завершаем работу потока
 	if (param == NULL) {
-		cout << "No args to work";
+		cout << "No args to work in thread";
 		return NULL;
 	}
 
@@ -47,21 +49,37 @@ void* thread_job(void* arg)
 		// Получаем переменную с информацией об атрибутах текущего потока
 		pthread_attr_t attr;
 		pthread_getattr_np(thread, &attr);
+		if (err != 0) {
+			cout << "Cannot get thread attributes: " << strerror(err) << endl;
+			exit(-1);
+		}
 
 		// Из структуры получаем:
 		// + Тип создаваемого потока
 		int detach_state;
 		pthread_attr_getdetachstate(&attr, &detach_state);
+		if (err != 0) {
+			cout << "Cannot get detachet state: " << strerror(err) << endl;
+			exit(-1);
+		}
 
 		// + Размер охранной зоны, байт
 		size_t guard_size;
 		pthread_attr_getguardsize(&attr, &guard_size);
-
+		if (err != 0) {
+			cout << "Cannot get guard size: " << strerror(err) << endl;
+			exit(-1);
+		}
+		
 		// + Размер стека, байт
 		size_t stack_size;
 		// + Адрес стека
 		void * stack_addr;
 		pthread_attr_getstack(&attr, &stack_addr, &stack_size);
+		if (err != 0) {
+			cout << "Cannot get stack: " << strerror(err) << endl;
+			exit(-1);
+		}
 
 		// Освобождаем память, занятую под хранение атрибутов потока
 		pthread_attr_destroy(&attr);
