@@ -8,7 +8,7 @@
 using namespace std;
 
 // Структура, передаваемая в качестве аргумента потока
-struct thread_args {
+struct thread_params {
     // Указатель на элемент массива, с которого поток начнёт применять функцию поэлементно
 	float* first_number_ptr;
     // Количество элементов на поток
@@ -22,17 +22,17 @@ void* thread_job(void* arg)
 {
     int err;
 
-	// Преобразуем аргументы к нужному типу
-	thread_args* param = (thread_args*) arg;
+	// Преобразуем аргумент к нужному типу
+	thread_params* params = (thread_params*) arg;
 	
-    // Если не было передано аргументов, то завершаем работу потока
-	if (param == NULL) {
-		cout << "No args to work" << endl;
+    // Если не было передано аргумента, то завершаем работу потока
+	if (params == NULL) {
+		cout << "No arg to work in thread" << endl;
 		return NULL;
 	} else {
         // Применяем функцию поэлементно
-        for (unsigned int i = 0; i < param->batch_size; i++) {
-            *(param->first_number_ptr + i) = param->func_ptr(*(param->first_number_ptr + i));
+        for (unsigned int i = 0; i < params->batch_size; i++) {
+            *(params->first_number_ptr + i) = params->func_ptr(*(params->first_number_ptr + i));
         }
     }
 	
@@ -78,21 +78,21 @@ int main(int argc, char* argv[]) {
     float* number_arr = new float[array_length];
     initialize_array(array_length, number_arr);
     
-    // Массив аргументов потоков
-    thread_args* targs_arr = new thread_args[threads_count];
+    // Массив параметров потоков
+    thread_params* params_arr = new thread_params[threads_count];
     
     int err;
     for (unsigned int i = 0; i < threads_count; i++) {
         // Задаём параметры структуры, которую передадим в поток
-        targs_arr[i].func_ptr = &executable_function;
-        targs_arr[i].first_number_ptr = number_arr + i * batch_size;
-        targs_arr[i].batch_size = batch_size;
+        params_arr[i].func_ptr = &executable_function;
+        params_arr[i].first_number_ptr = number_arr + i * batch_size;
+        params_arr[i].batch_size = batch_size;
         // Если последний поток, то добавим ему на обработку остаток массива
         if (i == threads_count - 1) {
-            targs_arr[i].batch_size += rest;
+            params_arr[i].batch_size += rest;
         }
 
-        err = pthread_create(thread_arr + i, NULL, thread_job, (void*) (targs_arr + i));
+        err = pthread_create(thread_arr + i, NULL, thread_job, (void*) (params_arr + i));
         if (err != 0) {
 			cout << "Cannot create a thread: " << strerror(err) << endl;
 			exit(-1);
@@ -109,6 +109,6 @@ int main(int argc, char* argv[]) {
     }
     
     delete[] number_arr;
-    delete[] targs_arr;
+    delete[] params_arr;
     delete[] thread_arr;
 }

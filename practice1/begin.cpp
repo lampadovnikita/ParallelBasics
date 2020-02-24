@@ -7,7 +7,7 @@
 using namespace std;
 
 // Структура, передаваемая в качестве аргумента потока
-struct thread_args {
+struct thread_params {
 	// Имя потока
 	char name[20];
 	// Количество однотипных операций внутри потока
@@ -25,16 +25,16 @@ void* thread_job(void* arg)
 
 	int err;
 
-	// Преобразуем аргументы к нужному типу
-	thread_args *param = (thread_args *) arg;
-	// Если не было передано аргументов, то завершаем работу потока
-	if (param == NULL) {
-		cout << "No args to work in thread";
+	// Преобразуем аргумент к нужному типу
+	thread_params *params = (thread_params *) arg;
+	// Если не было передано аргумента, то завершаем работу потока
+	if (params == NULL) {
+		cout << "No arg to work in thread";
 		return NULL;
 	}
 
-	// Из структуры аргумента получаем число операций
-	int operation_count = param->operations_count;
+	// Из структуры-аргумента получаем число операций
+	int operation_count = params->operations_count;
 
 	double number = 1.0;
 	for (unsigned int i = 0; i < operation_count; i++) {
@@ -42,7 +42,7 @@ void* thread_job(void* arg)
 	}
 
 	// Если необходимо, то выводим информацию об атрибутах потока
-	if (param->enable_cout == true) {
+	if (params->enable_cout == true) {
 		// Получаем индентефикатор текущего потока
 		pthread_t thread;
 		thread = pthread_self();
@@ -87,7 +87,7 @@ void* thread_job(void* arg)
 
 		cout << "*****Thread info*****" << endl;
 		
-		cout << "Name: " << param->name << endl;
+		cout << "Name: " << params->name << endl;
 		cout << "Detach state: ";
 		if (detach_state == PTHREAD_CREATE_JOINABLE) {
 			cout << "joinable";
@@ -104,7 +104,7 @@ void* thread_job(void* arg)
 	auto end = chrono::steady_clock::now();
 
 	auto elapsed_time = chrono::duration_cast<std::chrono::microseconds>(end - begin);
-	param->work_time = elapsed_time;
+	params->work_time = elapsed_time;
 
 	return NULL;
 }
@@ -123,11 +123,11 @@ int main(int argc, char* argv[])
 	int err;
 
 	// Инициализируем структуру-аргумент
-	thread_args targs;
+	thread_params params;
 	// Начальное число операций
-	targs.operations_count = 1000;
+	params.operations_count = 1000;
 	// Не будем выводить информацию об атрибутах, т.к. это занимает время
-	targs.enable_cout = false;
+	params.enable_cout = false;
 	
 	// Последовательно запускаем заданное число потоков
 	// с возрастающим числом операций
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 		auto begin = chrono::steady_clock::now();
 
 		// Создаём поток
-		err = pthread_create(&thread, NULL, thread_job, (void*) &targs);
+		err = pthread_create(&thread, NULL, thread_job, (void*) &params);
 		// Если при создании потока произошла ошибка, выводим
 		// сообщение об ошибке и прекращаем работу программы
 		if (err != 0) {
@@ -154,12 +154,12 @@ int main(int argc, char* argv[])
 
 		auto elapsed_time = chrono::duration_cast<std::chrono::microseconds>(end - begin);
 
-		cout << "With " << targs.operations_count << " operations" << endl
-			 << "Thread was running: (inner time)" << targs.work_time.count() << " us" << endl
+		cout << "With " << params.operations_count << " operations" << endl
+			 << "Thread was running: (inner time)" << params.work_time.count() << " us" << endl
 		     << "                    (outer time)" << elapsed_time.count() << " us" << endl
 			 << "=====================================" << endl;
 		
-		targs.operations_count *= 20;
+		params.operations_count *= 20;
 	}
 
 	// Проинициализируем переменную для хранения атрибутов потока
@@ -181,14 +181,14 @@ int main(int argc, char* argv[])
 	}
 
 	// Поток создан только для вывода информации о нём
-	targs.operations_count = 0;
+	params.operations_count = 0;
 	// Установим необходимость вывода информации об атрибутах потока
-	targs.enable_cout = true;
+	params.enable_cout = true;
 	// Зададим имя
-	strcpy(targs.name, "MyThread");
+	strcpy(params.name, "MyThread");
 
 	// Создаём поток с нестандартными атрибутами
-	err = pthread_create(&thread, &thread_attr, thread_job, (void*) &targs);
+	err = pthread_create(&thread, &thread_attr, thread_job, (void*) &params);
 	if (err != 0)
 	{
 		cout << "Cannot create a thread: " << strerror(err) << endl;
