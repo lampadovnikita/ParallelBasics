@@ -8,6 +8,12 @@
 #include <arpa/inet.h>
 #include <err.h>
 #include <string.h>
+#include <pthread.h>
+
+struct request_handler_params{
+    int socket_desk;
+    int request_number;
+};
 
 void build_response_str(char* str, int request_number) {
     snprintf(
@@ -20,10 +26,20 @@ void build_response_str(char* str, int request_number) {
     );
 }
 
+void* request_handler(void* arg) {
+    request_handler_params* params = (request_handler_params*)arg; 
+    
+    char response_buf[150];
+    build_response_str(response_buf, params->request_number);       
+    write(params->socket_desk, response_buf, strlen(response_buf) * sizeof(char)); /*-1:'\0'*/
+        
+    shutdown(params->socket_desk, SHUT_WR);
+
+    delete params;
+}
+
 int main()
 {
-    char response_buf[150];
-
     int one = 1, client_fd;
     struct sockaddr_in svr_addr, cli_addr;
     socklen_t sin_len = sizeof(cli_addr);
@@ -40,27 +56,29 @@ int main()
     svr_addr.sin_addr.s_addr = INADDR_ANY;
     svr_addr.sin_port = htons(port);
     
-    if (bind(sock, (struct sockaddr *) &svr_addr, sizeof(svr_addr)) == -1) {
+    if (bind(sock, (struct sockaddr*) &svr_addr, sizeof(svr_addr)) == -1) {
         close(sock);
         err(1, "Can't bind");
     }
 
     int request_number = 1;
-    listen(sock, 100);
-    while (1) {
-        client_fd = accept(sock, (struct sockaddr *) &cli_addr, &sin_len);
-        printf("got connection\n");
+    listen(sock, 10);
     
+    
+    while (1) {
+        client_fd = accept(sock, (struct sockaddr*) &cli_addr, &sin_len);
         if (client_fd == -1) {
             perror("Can't accept");
             continue;
         }
+        
+        request_handler_params* params = new request_handler_params;
+        params->request_number = request_number;
+        params->socket_desk = client_fd;
+        
+        pthread_t thread;
+        pthread_create(&thread, NULL, request_handler, (void*) params);
 
-        build_response_str(response_buf, request_number);
-        request_number++;    
-        
-        write(client_fd, response_buf, strlen(response_buf) * sizeof(char)); /*-1:'\0'*/
-        
-        shutdown(client_fd, SHUT_WR);
+        request_number++;
     }
 }
