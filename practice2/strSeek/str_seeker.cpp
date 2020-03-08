@@ -3,8 +3,11 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <experimental/filesystem>
+#include <iomanip>
 
 using namespace std;
+namespace fs = std::experimental::filesystem;
 
 bool seekLines(const string &rFileName, const string &rSeeked, vector<size_t> &rLineNumbers) {
     ifstream fileInput(rFileName, ios_base::in);
@@ -32,27 +35,25 @@ int main(int argc, char* argv[]) {
         cout << "Too few program arguments:" << endl;
         
         if (argc < 2) {
-            cout << "Need to specify root folder for seek.";
+            cout << "Need to specify root folder for seek." << endl;
         }
 
         cout << "Need to specify seeked string." << endl;
 
         exit(0);
     }
-
+     
+    for (auto itEntry = fs::recursive_directory_iterator("~/testseek/");
+         itEntry != fs::recursive_directory_iterator(); 
+         ++itEntry) {
+        const auto filenameStr = itEntry->path().filename().string();
+        std::cout << std::setw(itEntry.depth()*3) << "";
+        std::cout << "dir:  " << filenameStr << '\n';
+    }
     string seeked = argv[1];    
-    string seekPath = argv[2];
-    vector<size_t> lineNumbers;
-    //string fileName = "example.txt";
-    
-    // if (seekLines(fileName, seeked, lineNumbers) == false) {
-    //     cout << "Can't open file: " << fileName << endl;
-    //     exit(-1);
-    // }
+    //string seekPath = "~/testseek/";//argv[2];
 
-    // for (size_t i = 0; i < lineNumbers.size(); i++) {
-    //     cout << lineNumbers[i] << endl;
-    // }
+    vector<size_t> lineNumbers;
 
     exit(0);
 }
