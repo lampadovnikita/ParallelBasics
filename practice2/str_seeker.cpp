@@ -9,6 +9,8 @@
 using namespace std;
 namespace fs = std::experimental::filesystem;
 
+const string requiredExtension = ".txt";
+
 bool seekLines(const string &rFileName, const string &rSeeked, vector<size_t> &rLineNumbers) {
     ifstream fileInput(rFileName, ios_base::in);
     if (fileInput.is_open() == false) {
@@ -30,6 +32,19 @@ bool seekLines(const string &rFileName, const string &rSeeked, vector<size_t> &r
     return true;
 }
 
+void collectPaths(const string &rRootPath, const string &rExtension, vector<string> &rPathsContainer) {
+    for (auto itEntry = fs::recursive_directory_iterator(rRootPath);
+         itEntry != fs::recursive_directory_iterator(); 
+         ++itEntry) {
+
+        const auto filePath = itEntry->path();
+        const string fileExtension = filePath.extension().string();
+        if (fileExtension == rExtension) {
+            rPathsContainer.push_back(filePath.string());
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         cout << "Too few program arguments:" << endl;
@@ -43,17 +58,34 @@ int main(int argc, char* argv[]) {
         exit(0);
     }
      
-    for (auto itEntry = fs::recursive_directory_iterator("~/testseek/");
-         itEntry != fs::recursive_directory_iterator(); 
-         ++itEntry) {
-        const auto filenameStr = itEntry->path().filename().string();
-        std::cout << std::setw(itEntry.depth()*3) << "";
-        std::cout << "dir:  " << filenameStr << '\n';
-    }
-    string seeked = argv[1];    
-    //string seekPath = "~/testseek/";//argv[2];
+    
+    string seekedStr = argv[1];    
+    string rootSeekPath = "/home/nikita/testseek/";//argv[2];
 
-    vector<size_t> lineNumbers;
+    vector<size_t> entryLineNumbers;
+    vector<string> pathsForSeek;
+    collectPaths(rootSeekPath, requiredExtension, pathsForSeek);
+
+    for (size_t i = 0; i < pathsForSeek.size(); i++) {
+        if (seekLines(pathsForSeek[i], seekedStr, entryLineNumbers) != true) {
+            cout << "Can't open file " << pathsForSeek[i] << endl;
+            exit(-1);
+        }
+        
+        cout << pathsForSeek[i] << ":" << endl;
+        
+        if (!entryLineNumbers.empty()) {
+            for (size_t j = 0; j < entryLineNumbers.size(); j++) {
+                cout << entryLineNumbers[j] << endl;
+            }
+
+            entryLineNumbers.clear();
+        } else {
+            cout << "No entries found." << endl;
+        }
+
+        cout << endl;
+    }
 
     exit(0);
 }
