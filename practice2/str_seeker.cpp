@@ -19,41 +19,53 @@
 using namespace std;
 namespace fs = std::experimental::filesystem;
 
+// Расширение файлов, которые будем просматривать
 const string requiredExtension = ".txt";
 
-
+// Класс для работы с пулом потоков
 class ThreadPool {
 
 private:
+    // Идентификаторы потоков в пуле
     vector<pthread_t> mThreads;
 
-     queue<void*> mTaskArgs;
+    // Очередь, которая содержит аргументы задач = очередь задач
+    queue<void*> mTaskArgs;
 
-     void* (*mTaskPtr) (void*);
+    // Указатель на функцию-задачу
+    void* (*mTaskPtr) (void*);
 
-    pthread_mutex_t mutex;
+    pthread_mutex_t mMutex;
 
-     void* thread_job(void* classContext) {
+    // Внутренняя функция для потоков из пула
+    void* threadJob(void* classContext) {
         int err;
         size_t queueSize;
         void* taskArg;
-        while(true) {
-            pthread_mutex_lock(&mutex);
-            if (err != 0)
-                err_exit(err, "Cannot lock mutex");
-            
 
+        while(true) {
+            // Захватываем мьютекс, чтобы синхронизировать доступ к очереди задач
+            pthread_mutex_lock(&mMutex);
+            if (err != 0)
+                err_exit(err, "Cannot lock mutex"); 
+            
             queueSize = mTaskArgs.size();
+            // Если очередь не пуста, то поток берёт аргументы новой задачи
             if (queueSize > 0) {
                 taskArg = mTaskArgs.front();
                 mTaskArgs.pop();
             }
-
-            pthread_mutex_unlock(&mutex);
+            
+            // Освобождаем мьютекс, т.к. вся необходимая информация получена
+            pthread_mutex_unlock(&mMutex);
             if (err != 0)
                 err_exit(err, "Cannot unlock mutex");
 
+            // Если была взята задача, т.е. очередь не была пуста во время обращения
+            // в критической секции, то выполняем задачу со взятыми аргументами
+            // Иначе завершаем работу потока, т.к. более нет задач
             if (queueSize > 0) {
+                
                 mTaskPtr(taskArg);
             } else {
                 return NULL;
@@ -62,8 +74,10 @@ private:
     }
 
 public:
+    // В конструкторе задаём указатель на функцию-задачу и число потоков
     ThreadPool(void* (*taskPtr) (void*), const size_t threadCount) {
-        int err = pthread_mutex_init(&mutex, NULL);
+
+        int err = pthread_mutex_init(&mMutex, NULL);
         if (err != 0)
             err_exit(err, "Cannot initialize mutex");
 
@@ -75,18 +89,21 @@ public:
         }
     }
 
+    // Добавляем задачу в пул
     void addTask(void* taskArg) {
         mTaskArgs.push(taskArg);
     }
 
+    // Запускаем работу потоков
     void run() {
         int err;
         for (size_t i = 0; i < mThreads.size(); i++) {
-            err = pthread_create(&mThreads[i], NULL, (void*(*)(void*))&ThreadPool::thread_job, (void*) this);
+            err = pthread_create(&mThreads[i], NULL, (void*(*)(void*))&ThreadPool::threadJob, (void*) this);
             if (err != 0)
                 err_exit(err, "Cannot create thread");            
         }
 
+        // Дожидаемся завершения всех потоков
         for (size_t i = 0; i < mThreads.size(); i++) {
             err = pthread_join(mThreads[i], NULL);
             if (err != 0)
@@ -95,7 +112,12 @@ public:
     }
 };
 
+// Функция, которая записывает пути ко всем необходимым файлам
+// rRootPath - ссылка на строку с директорией, в которой начинается поиск
+// rExtension - ссылка на строку с расширением, которое будем учитывать при поиске файлов
+// rPathContainer - ссылка на вектор, в который будут записаны пути к найденым файлам
 void collectPaths(const string &rRootPath, const string &rExtension, vector<string> &rPathsContainer) {
+    // Используем рекурсивный итератор, чтобы обойти все внутренние директории
     for (auto itEntry = fs::recursive_directory_iterator(rRootPath);
          itEntry != fs::recursive_directory_iterator(); 
          ++itEntry) {
@@ -108,17 +130,24 @@ void collectPaths(const string &rRootPath, const string &rExtension, vector<stri
     }
 }
 
+// Структура, которая соержит параметры, необходимые для выполненния одной
+// конкретной задачи пулом потоков
 struct ThreadParams {
-    string *filePath;
-    string *seeked;
-    vector<size_t> *lineNumbers;
+    // Путь к файлу
+    string *pFilePath;
+    // Искомая подстрока
+    string *pSeeked;
+    // Вектор, в который будут записаны номера строк со вхождениями подстроки
+    vector<size_t> *pLineNumbers;
 };
 
-void* seekSubstr(void* arg) {
-    ThreadParams* params = (ThreadParams*) arg;
-    string filePath = *params->filePath;
-    string seeked = *params->seeked;
-    vector<size_t> *lineNumbers = params->lineNumbers;
+// Функция-задача, которая выполняется потоком из пула
+void* seekSubstr(void *pArg) {
+    // Распаковываем параметры из аргумента функции
+    ThreadParams* params = (ThreadParams*) pArg;
+    string filePath = *params->pFilePath;
+    string seeked = *params->pSeeked;
+    vector<size_t> *pLineNumbers = params->pLineNumbers;
 
     ifstream fileInput(filePath, ios_base::in);
     if (fileInput.is_open() == false) {
@@ -127,11 +156,15 @@ void* seekSubstr(void* arg) {
 
     size_t curLine = 0;
     string lineBuf;
+    // Пока можем считать строку из файла
     while(getline(fileInput, lineBuf)) {
+        // Увеличиваем счётчик строк
         curLine++;
 
+        // Если нашли вхождение подстроки в текущей строке, 
+        // то добавляем номер текущей строки
         if (lineBuf.find(seeked, 0) != string::npos) {
-            (*lineNumbers).push_back(curLine);
+            (*pLineNumbers).push_back(curLine);
         }
     }
 
@@ -141,6 +174,7 @@ void* seekSubstr(void* arg) {
 }
 
 int main(int argc, char* argv[]) {
+    // Необходимо как минимум 3 аргумента
     if (argc < 3) {
         cout << "Too few program arguments:" << endl;
         
@@ -152,36 +186,46 @@ int main(int argc, char* argv[]) {
 
         exit(0);
     }
-     
+    // Искомая подстрока
     string seekedStr = argv[1];    
     
+    // Директория, в которой будем искать файлы
     string rootSeekPath = argv[2];
     if (!fs::exists(rootSeekPath)) {
         cout << rootSeekPath << " directory doesn't exist." << endl;
         exit(0);
     }
 
+    // Количество потоков в пуле
     size_t threadCount = argc > 4 ? argc : 1;
 
+    // Ищем нужные нам файлы
     vector<string> filePaths;
     collectPaths(rootSeekPath, requiredExtension, filePaths);
 
+    // Двумерный вектор, каждый подвектор которого содержит
+    // номера искомых строк в i-ом файле
     vector<vector<size_t>> entryLineNumbers;
     entryLineNumbers.resize(filePaths.size());
 
+    // Инициализируем наш пул потоков
     ThreadPool threadPool(&seekSubstr, threadCount);
-    
+
     ThreadParams* params = new ThreadParams[filePaths.size()];
     for (size_t i = 0; i < filePaths.size(); i++) {
-        params[i].filePath = &filePaths[i];
-        params[i].seeked = &seekedStr;
-        params[i].lineNumbers = &entryLineNumbers[i];
+        // Инициализируем параметры каждой задачи
+        params[i].pFilePath = &filePaths[i];
+        params[i].pSeeked = &seekedStr;
+        params[i].pLineNumbers = &entryLineNumbers[i];
 
+        // Добавляем задачу в пул
         threadPool.addTask((void*) &params[i]);
     }
 
+    // Запускаем пул потоков
     threadPool.run();
 
+    // Выводим информацию о вхождения подстроки в каждом подходящем файле
     for (size_t i = 0; i < entryLineNumbers.size(); i++) {
         cout << filePaths[i] << ":" << endl;
         
