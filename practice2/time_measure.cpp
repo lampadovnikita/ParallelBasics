@@ -19,27 +19,29 @@ using namespace std;
 enum SyncTypes { LACK, MUTEX, SPINLOCK };  
 
 // Тип синхронизации, который мы используем 
-const SyncTypes mSyncType = SyncTypes::MUTEX;
+const SyncTypes mSyncType = SyncTypes::LACK;
 
 pthread_mutex_t mMutex;
 pthread_spinlock_t mSpinlock;
+
+int currTask = 0;
 
 // Функция, которая имитирует долгие вычисления
 void do_task()
 {
     float result = 0;
 
-    int repeat_count = 1000000;
+    int repeat_count = 100000;
     for (int i = 0; i < repeat_count; i++) {
         result += sin(i);
     }
 }
 
 // Функция-поток
-void *thread_job(void *params)
+void *mock(void *params)
 {
     int err;
-    
+    int task;
     pthread_t thread = pthread_self();
 
     // Блокируем участок используемым типом синхронизации
@@ -51,10 +53,12 @@ void *thread_job(void *params)
     else if (mSyncType == SyncTypes::SPINLOCK) {
         err = pthread_spin_lock(&mSpinlock);
         if (err != 0)
-            err_exit(err, "Cannot lock mutex");
+            err_exit(err, "Cannot lock spinlock");
     }
+    
+    task = currTask;
+    currTask++;
 
-    do_task();
 
     // Освобождаем участок используемым типом синхронизации
     if (mSyncType == SyncTypes::MUTEX) {
@@ -67,6 +71,8 @@ void *thread_job(void *params)
         if (err != 0)
             err_exit(err, "Cannot unlock spinlock");
     }
+
+    //do_task();
 }
 
 int main(int argc, char* argv[])
@@ -106,7 +112,7 @@ int main(int argc, char* argv[])
 
     // Создаём потоки
     for (int i = 0; i < threads_count; i++) {
-        err = pthread_create(threads + i, NULL, &thread_job, NULL);
+        err = pthread_create(threads + i, NULL, &mock, NULL);
         if (err != 0) {
             char err_str[35];
             snprintf(err_str, strlen(err_str) * sizeof(char), "Cannot create thread %d", i);
