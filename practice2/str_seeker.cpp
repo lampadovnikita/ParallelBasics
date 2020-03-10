@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Количество потоков в пуле
-    size_t threadCount = argc > 4 ? argc : 1;
+    size_t threadCount = argc > 4 ? atoi(argv[3]) : 1;
 
     // Ищем нужные нам файлы
     vector<string> filePaths;
