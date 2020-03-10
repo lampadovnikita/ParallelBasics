@@ -209,6 +209,10 @@ std::map<char, float> mapReduce(float *arr, size_t arrLength, void *(*pMap)(void
         pthread_join(threads[i], NULL);
     }
 
+    // Освобождаем ресурсы, связанные с мьютексом и спинлоком
+    pthread_mutex_destroy(&mMutex);
+    pthread_spin_destroy(&mSpinlock);
+
     return resReduce;
 }
 
