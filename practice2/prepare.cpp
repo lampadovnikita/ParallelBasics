@@ -20,6 +20,8 @@ int current_task = 0;       // Указатель на текущее задан
 
 pthread_mutex_t mutex;      // Мьютекс
 
+pthread_cond_t cond;
+
 void do_task(int task_no)
 {
     float result = 0;
@@ -69,10 +71,25 @@ void *thread_job(void *arg)
         // В противном случае завершаем работу потока
         if (task_no < TASKS_COUNT)
             do_task(task_no);
-        else
+        else 
             return NULL;
     }
 }
+
+void *cond_thread_job(void *arg) {
+    int err = pthread_mutex_lock(&mutex);
+    if (err != 0)
+        err_exit(err, "Cannot lock mutex");
+
+    pthread_cond_wait(&cond, &mutex);
+
+    cout << "The program is closing." << endl;
+
+    err = pthread_mutex_unlock(&mutex);
+    if (err != 0)
+        err_exit(err, "Cannot unlock mutex");
+}
+
 int main()
 {
     // Код ошибки
@@ -89,7 +106,16 @@ int main()
     if (err != 0)
         err_exit(err, "Cannot initialize mutex");
     
+    err = pthread_cond_init(&cond, NULL);
+    if (err != 0)
+        err_exit(err, "Cannot initialize condition");
+
     // Создаём потоки
+    pthread_t cond_thread;
+    err = pthread_create(&cond_thread, NULL, cond_thread_job, NULL);
+    if (err != 0)
+        err_exit(err, "Cannot create thread 2");
+
     err = pthread_create(&thread1, NULL, thread_job, NULL);
     if (err != 0)
         err_exit(err, "Cannot create thread 1");
@@ -100,7 +126,11 @@ int main()
     
     pthread_join(thread1, NULL);
     pthread_join(thread2, NULL);
-    
+
+    pthread_cond_signal(&cond);
+
+    pthread_join(cond_thread, NULL);
+
     // Освобождаем ресурсы, связанные с мьютексом
     pthread_mutex_destroy(&mutex);
 }
