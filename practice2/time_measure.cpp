@@ -38,7 +38,7 @@ void do_task()
 }
 
 // Функция-поток
-void *mock(void *params)
+void *threadJob(void *params)
 {
     int err;
     int task;
@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
 
     // Создаём потоки
     for (int i = 0; i < threads_count; i++) {
-        err = pthread_create(threads + i, NULL, &mock, NULL);
+        err = pthread_create(threads + i, NULL, &threadJob, NULL);
         if (err != 0) {
             char err_str[35];
             snprintf(err_str, strlen(err_str) * sizeof(char), "Cannot create thread %d", i);

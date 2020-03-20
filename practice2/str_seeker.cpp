@@ -45,7 +45,7 @@ private:
 
         while(true) {
             // Захватываем мьютекс, чтобы синхронизировать доступ к очереди задач
-            pthread_mutex_lock(&mMutex);
+            err = pthread_mutex_lock(&mMutex);
             if (err != 0)
                 err_exit(err, "Cannot lock mutex"); 
             
@@ -57,7 +57,7 @@ private:
             }
             
             // Освобождаем мьютекс, т.к. вся необходимая информация получена
-            pthread_mutex_unlock(&mMutex);
+            err = pthread_mutex_unlock(&mMutex);
             if (err != 0)
                 err_exit(err, "Cannot unlock mutex");
 
