@@ -1,3 +1,5 @@
+// Пункты №1
+
 #include <omp.h>
 #include <iostream>
 

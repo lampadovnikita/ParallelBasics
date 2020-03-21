@@ -1,3 +1,5 @@
+// Пункт №2-3
+
 #include <omp.h>
 #include <iostream>
 #include <cmath>
