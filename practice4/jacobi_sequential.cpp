@@ -128,10 +128,10 @@ void jacobi(vector<vector<vector<double>>>& grid1)
     // Второй вектор для того, чтобы использовать значения предыдущей итерации
     vector<vector<vector<double>>> grid2 = grid1;
 
-    // Указатель на вектор из которого на некоторой итерации
+    // Указатель на вектор, из которого на некоторой итерации
     // берутся значения для расчёта
     vector<vector<vector<double>>>* currentSourcePtr = &grid1;
-    // Указатель на вектор в которой на некоторой итерации
+    // Указатель на вектор, в который на некоторой итерации
     // Записываются новые значения
     vector<vector<vector<double>>>* currentDestPtr = &grid2;
     // Вспомогательный указатель для перемены указателей на векторы
@@ -174,6 +174,7 @@ void jacobi(vector<vector<vector<double>>>& grid1)
     }
     while (maxConverg > epsilon);
 
+    // В итоге вектор должен содержать значения последней итерации
     grid1 = *currentDestPtr;
 }
 
