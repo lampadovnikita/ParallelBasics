@@ -113,7 +113,6 @@ void initGrid(vector<vector<vector<double>>>& grid)
 
 void jacobi(vector<vector<vector<double>>>& grid1)
 {
-    double newValue;
     // Значение сходимости для некоторого узла сетки
     double localConverg;
     // Максимальное значение сходимости по всем узлам на некоторой итерации
