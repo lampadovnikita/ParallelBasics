@@ -36,13 +36,13 @@ const double hx = Dx / (Nx - 1);
 const double hy = Dy / (Ny - 1);
 const double hz = Dz / (Nz - 1);
 
-void printGrid(vector<vector<vector<double>>>& grid)
+void printGrid(double*** grid)
 {
-    for (int i = 0; i < grid.size(); i++) {
+    for (int i = 0; i < Nx; i++) {
         printf("x = %d\n", i);
         
-        for (int j = 0; j < grid[i].size(); j++) {
-            for (int k = 0; k < grid[i][j].size(); k++) {
+        for (int j = 0; j < Ny; j++) {
+            for (int k = 0; k < Nz; k++) {
                 printf("%.5f ", grid[i][j][k]);
             }
 
@@ -67,9 +67,26 @@ double toReal(double start, double step, int bias)
     return start + step * bias;
 }
 
-// Записываем краевые значения
-void initGrid(vector<vector<vector<double>>>& grid)
+void initGrid(double*** &grid)
 {
+    grid = new double** [Nx];
+    for (int i = 0; i < Nx; i++) {
+        grid[i] = new double* [Ny];
+        for (int j = 0; j < Ny; j++) {
+            grid[i][j] = new double [Nz];
+        }
+    }
+
+    // Записываем значения внутри области
+    for (int i = 1; i < Nx - 1; i++) {
+        for (int j = 1; j < Ny; j++) {
+            for (int k = 1; k < Nz; k++) {
+                grid[i][j][k] = phi0;
+            }
+        }
+    }
+
+    // Записываем краевые значения
     // При i = 0
     for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nz; k++) {
@@ -111,7 +128,18 @@ void initGrid(vector<vector<vector<double>>>& grid)
     }
 }
 
-void jacobi(vector<vector<vector<double>>>& grid1)
+void deleteGrid(double*** grid) 
+{
+    for (int i = 0; i < Nx; i++) {
+        for (int j = 0; j < Ny; j++) {
+            delete[] grid[i][j];
+        }
+        delete[] grid[i];
+    }
+    delete[] grid;
+}
+
+void jacobi(double*** grid1)
 {
     // Значение сходимости для некоторого узла сетки
     double localConverg;
@@ -125,17 +153,18 @@ void jacobi(vector<vector<vector<double>>>& grid1)
     // Константа, вынесенная за скобки
     double c = 1 / ((2 / hx2) + (2 / hy2) + (2 / hz2) + a);
 
-    // Второй вектор для того, чтобы использовать значения предыдущей итерации
-    vector<vector<vector<double>>> grid2 = grid1;
+    // Второй массив для того, чтобы использовать значения предыдущей итерации
+    double*** grid2;
+    initGrid(grid2);
 
-    // Указатель на вектор, из которого на некоторой итерации
+    // Указатель на массив, из которого на некоторой итерации
     // берутся значения для расчёта
-    vector<vector<vector<double>>>* currentSourcePtr = &grid1;
-    // Указатель на вектор, в который на некоторой итерации
+    double*** currentSourcePtr = grid1;
+    // Указатель на массив, в который на некоторой итерации
     // Записываются новые значения
-    vector<vector<vector<double>>>* currentDestPtr = &grid2;
-    // Вспомогательный указатель для перемены указателей на векторы
-    vector<vector<vector<double>>>* tmpPtr;
+    double*** currentDestPtr = grid2;
+    // Вспомогательный указатель для перемены указателей на массивы
+    double*** tmpPtr;
     
     do {
         maxConverg = 0.0;
@@ -145,20 +174,20 @@ void jacobi(vector<vector<vector<double>>>& grid1)
                 for (int k = 1; k < Nz - 1; k++) {
 
                     // Первая дробь в скобках
-                    (*currentDestPtr)[i][j][k] = ((*currentSourcePtr)[i + 1][j][k] + (*currentSourcePtr)[i - 1][j][k]) / hx2;
+                    currentDestPtr[i][j][k] = (currentSourcePtr[i + 1][j][k] + currentSourcePtr[i - 1][j][k]) / hx2;
 
                     // Вторая дробь в скобках
-                    (*currentDestPtr)[i][j][k] += ((*currentSourcePtr)[i][j + 1][k] + (*currentSourcePtr)[i][j - 1][k]) / hy2;
+                    currentDestPtr[i][j][k] += (currentSourcePtr[i][j + 1][k] + currentSourcePtr[i][j - 1][k]) / hy2;
 
                     // Третья дробь в скобках
-                    (*currentDestPtr)[i][j][k] += ((*currentSourcePtr)[i][j][k + 1] + (*currentSourcePtr)[i][j][k - 1]) / hz2;
+                    currentDestPtr[i][j][k] += (currentSourcePtr[i][j][k + 1] + currentSourcePtr[i][j][k - 1]) / hz2;
 
                     // Остальная часть вычисления нового значения для данного узла
-                    (*currentDestPtr)[i][j][k] -= rho((*currentSourcePtr)[i][j][k]);
-                    (*currentDestPtr)[i][j][k] *= c;
+                    currentDestPtr[i][j][k] -= rho(currentSourcePtr[i][j][k]);
+                    currentDestPtr[i][j][k] *= c;
 
                     // Сходимость для данного узла
-                    localConverg = abs((*currentDestPtr)[i][j][k] - (*currentSourcePtr)[i][j][k]);
+                    localConverg = abs(currentDestPtr[i][j][k] - currentSourcePtr[i][j][k]);
                     if (localConverg > maxConverg) {
                         maxConverg = localConverg;
                     }
@@ -167,20 +196,28 @@ void jacobi(vector<vector<vector<double>>>& grid1)
             }
         }
 
-        // Меняем местами указатели на вектор-источник и вектор-приёмник
+        // Меняем местами указатели на массив-источник и массив-приёмник
         tmpPtr = currentSourcePtr;
         currentSourcePtr = currentDestPtr;
         currentDestPtr = tmpPtr;
     }
     while (maxConverg > epsilon);
 
-    // В итоге вектор должен содержать значения последней итерации
-    grid1 = *currentDestPtr;
+
+    // В итоге массив должен содержать значения последней итерации
+    if (currentSourcePtr == grid1) {
+        deleteGrid(grid2);
+    }
+    else {
+        tmpPtr = grid1;
+        grid1 = grid2;
+        deleteGrid(tmpPtr);
+    }
 }
 
 // Считаем точность, как максимальное значение модуля отклонения
 // от истинного значения функции
-double getPrecision(vector<vector<vector<double>>>& grid)
+double getPrecision(double*** &grid)
 {
     double localErr;
     double maxErr = 0.0;
@@ -203,9 +240,7 @@ double getPrecision(vector<vector<vector<double>>>& grid)
 
 int main(int argc, char** argv)
 {   
-    // Создаём решётку и инициализируем все элементы начальным приближением
-    vector<vector<vector<double>>> grid(Nx, vector<vector<double>>(Ny, vector<double>(Nz, phi0)));
-    // Устанавливаем краевые значения
+    double*** grid;
     initGrid(grid);
     
     printGrid(grid);
@@ -214,6 +249,8 @@ int main(int argc, char** argv)
 
     double precision = getPrecision(grid);
     printf("Precision = %f\n", precision);
+
+    deleteGrid(grid);
 
     return 0;
 }
