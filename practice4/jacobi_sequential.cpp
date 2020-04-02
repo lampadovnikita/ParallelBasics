@@ -27,9 +27,9 @@ const double Dy = yEnd - yStart;
 const double Dz = zEnd - zStart;
 
 // Количество узлов сетки
-const int Nx = 10;
-const int Ny = 10;
-const int Nz = 10;
+const int Nx = 8;
+const int Ny = 8;
+const int Nz = 8;
 
 // Размеры шага на сетке
 const double hx = Dx / (Nx - 1);
@@ -111,7 +111,7 @@ void initGrid(vector<vector<vector<double>>>& grid)
     }
 }
 
-void jacobi(vector<vector<vector<double>>>& grid)
+void jacobi(vector<vector<vector<double>>>& grid1)
 {
     double newValue;
     // Значение сходимости для некоторого узла сетки
@@ -122,10 +122,22 @@ void jacobi(vector<vector<vector<double>>>& grid)
     const double hx2 = pow(hx, 2);
     const double hy2 = pow(hy, 2);
     const double hz2 = pow(hz, 2);
-    
+
     // Константа, вынесенная за скобки
     double c = 1 / ((2 / hx2) + (2 / hy2) + (2 / hz2) + a);
 
+    // Второй вектор для того, чтобы использовать значения предыдущей итерации
+    vector<vector<vector<double>>> grid2 = grid1;
+
+    // Указатель на вектор из которого на некоторой итерации
+    // берутся значения для расчёта
+    vector<vector<vector<double>>>* currentSourcePtr = &grid1;
+    // Указатель на вектор в которой на некоторой итерации
+    // Записываются новые значения
+    vector<vector<vector<double>>>* currentDestPtr = &grid2;
+    // Вспомогательный указатель для перемены указателей на векторы
+    vector<vector<vector<double>>>* tmpPtr;
+    
     do {
         maxConverg = 0.0;
         
@@ -134,30 +146,36 @@ void jacobi(vector<vector<vector<double>>>& grid)
                 for (int k = 1; k < Nz - 1; k++) {
 
                     // Первая дробь в скобках
-                    newValue  = (grid[i + 1][j][k] + grid[i - 1][j][k]) / hx2; 
+                    (*currentDestPtr)[i][j][k] = ((*currentSourcePtr)[i + 1][j][k] + (*currentSourcePtr)[i - 1][j][k]) / hx2;
 
                     // Вторая дробь в скобках
-                    newValue += (grid[i][j + 1][k] + grid[i][j - 1][k]) / hy2;
+                    (*currentDestPtr)[i][j][k] += ((*currentSourcePtr)[i][j + 1][k] + (*currentSourcePtr)[i][j - 1][k]) / hy2;
 
                     // Третья дробь в скобках
-                    newValue += (grid[i][j][k + 1] + grid[i][j][k - 1]) / hz2;
+                    (*currentDestPtr)[i][j][k] += ((*currentSourcePtr)[i][j][k + 1] + (*currentSourcePtr)[i][j][k - 1]) / hz2;
 
                     // Остальная часть вычисления нового значения для данного узла
-                    newValue -= rho(grid[i][j][k]);
-                    newValue *= c;
+                    (*currentDestPtr)[i][j][k] -= rho((*currentSourcePtr)[i][j][k]);
+                    (*currentDestPtr)[i][j][k] *= c;
 
                     // Сходимость для данного узла
-                    localConverg = abs(newValue - grid[i][j][k]);
+                    localConverg = abs((*currentDestPtr)[i][j][k] - (*currentSourcePtr)[i][j][k]);
                     if (localConverg > maxConverg) {
                         maxConverg = localConverg;
                     }
 
-                    grid[i][j][k] = newValue;
                 }
             }
         }
+
+        // Меняем местами указатели на вектор-источник и вектор-приёмник
+        tmpPtr = currentSourcePtr;
+        currentSourcePtr = currentDestPtr;
+        currentDestPtr = tmpPtr;
     }
     while (maxConverg > epsilon);
+
+    grid1 = *currentDestPtr;
 }
 
 // Считаем точность, как максимальное значение модуля отклонения
