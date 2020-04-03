@@ -27,9 +27,9 @@ const double Dy = yEnd - yStart;
 const double Dz = zEnd - zStart;
 
 // Количество узлов сетки
-const int Nx = 8;
-const int Ny = 8;
-const int Nz = 8;
+const int Nx = 10;
+const int Ny = 10;
+const int Nz = 10;
 
 // Размеры шага на сетке
 const double hx = Dx / (Nx - 1);
@@ -46,7 +46,7 @@ void printGrid(double*** grid)
                 printf("%.5f ", grid[i][j][k]);
             }
 
-            printf("\n\n");
+            printf("\n");
         }
     } 
 }
@@ -139,7 +139,7 @@ void deleteGrid(double*** grid)
     delete[] grid;
 }
 
-void jacobi(double*** grid1)
+void jacobi(double*** &grid1)
 {
     // Значение сходимости для некоторого узла сетки
     double localConverg;
@@ -200,6 +200,8 @@ void jacobi(double*** grid1)
         tmpPtr = currentSourcePtr;
         currentSourcePtr = currentDestPtr;
         currentDestPtr = tmpPtr;
+
+        break;
     }
     while (maxConverg > epsilon);
 
@@ -210,14 +212,14 @@ void jacobi(double*** grid1)
     }
     else {
         tmpPtr = grid1;
-        grid1 = grid2;
+        grid1 = currentSourcePtr;
         deleteGrid(tmpPtr);
     }
 }
 
 // Считаем точность, как максимальное значение модуля отклонения
 // от истинного значения функции
-double getPrecision(double*** &grid)
+double getPrecision(double*** grid)
 {
     double localErr;
     double maxErr = 0.0;
@@ -246,6 +248,8 @@ int main(int argc, char** argv)
     printGrid(grid);
 
     jacobi(grid);
+
+    printGrid(grid);
 
     double precision = getPrecision(grid);
     printf("Precision = %f\n", precision);
