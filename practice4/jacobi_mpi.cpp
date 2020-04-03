@@ -492,7 +492,7 @@ int main(int argc, char** argv)
 		// При i = Nx - 1 
 		for (int j = 1; j < Ny - 1; j++) {
 			for (int k = 1; k < Nz - 1; k++) {
-				myGrid[Nx - 1][j][k] = phi(xEnd, toReal(yStart, hy, j), toReal(zStart, hz, k));
+				myGrid[xMyLocalLength - 1][j][k] = phi(xEnd, toReal(yStart, hy, j), toReal(zStart, hz, k));
 			}
 		}
 	}
