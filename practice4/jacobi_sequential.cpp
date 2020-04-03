@@ -201,7 +201,6 @@ void jacobi(double*** &grid1)
         currentSourcePtr = currentDestPtr;
         currentDestPtr = tmpPtr;
 
-        break;
     }
     while (maxConverg > epsilon);
 
