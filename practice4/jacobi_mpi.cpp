@@ -68,6 +68,7 @@ double toReal(double start, double step, int bias)
 
 void initGrid(double***& grid, int xLength, double xLocalStart)
 {
+	// Создаём массив и заполняем начальными значениями
 	grid = new double** [xLength];
 	for (int i = 0; i < xLength; i++) {
 		grid[i] = new double* [Ny];
@@ -81,6 +82,7 @@ void initGrid(double***& grid, int xLength, double xLocalStart)
 		}
 	}
 
+	// Записываем краевые значения
 	double xCurr;
 	for (int i = 0; i < xLength; i++) {
 		xCurr = toReal(xLocalStart, hx, i);
@@ -119,14 +121,46 @@ void deleteGrid(double*** grid, int xLocalLength)
 	delete[] grid;
 }
 
-void jacobi(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerProcRank, int upperProcRank)
+// Считаем точность, как максимальное значение модуля отклонения
+// от истинного значения функции
+double getPrecisionMPI(double*** grid, int xLocalLength, double xLocalStart, int rootProcRank)
+{
+	// Значение ошибки на некотором узле
+	double currErr;
+	// Максимальное значение ошибки данного процесса
+	double maxLocalErr = 0.0;
+
+	for (int i = 1; i < xLocalLength - 1; i++) {
+		for (int j = 1; j < Ny - 1; j++) {
+			for (int k = 1; k < Nz - 1; k++) {
+				currErr = abs(grid[i][j][k] -
+					phi(toReal(xLocalStart, hx, i), toReal(yStart, hy, j), toReal(zStart, hz, k)));
+
+				if (currErr > maxLocalErr) {
+					maxLocalErr = currErr;
+				}
+			}
+		}
+	}
+	
+	// Максимальное значение ошибки по всем процессам
+	double absoluteMax = -1;
+	MPI_Reduce((void*)&maxLocalErr, (void*)&absoluteMax, 1, MPI_DOUBLE, MPI_MAX, rootProcRank, MPI_COMM_WORLD);
+
+	return absoluteMax;
+}
+
+void jacobiMPI(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerProcRank, int upperProcRank)
 {
 	MPI_Status status;
 
 	// Значение сходимости для некоторого узла сетки
-	double localConverg;
+	double currConverg;
 	// Максимальное значение сходимости по всем узлам на некоторой итерации
-	double maxConverg;
+	double maxLocalConverg;
+
+	// Флаг, показывающий, является ли эпсилон больше любого значения сходимости для данного процесса
+	char isEpsilonHigher;
 
 	const double hx2 = pow(hx, 2);
 	const double hy2 = pow(hy, 2);
@@ -137,6 +171,7 @@ void jacobi(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerPr
 
 	// Второй массив для того, чтобы использовать значения предыдущей итерации
 	double*** grid2;
+	// Просто копируем входной массив
 	grid2 = new double** [xLocalLength];
 	for (int i = 0; i < xLocalLength; i++) {
 		grid2[i] = new double* [Ny];
@@ -162,8 +197,12 @@ void jacobi(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerPr
 	int messageLength = (Ny - 2) * (Nz - 2);
 	double* messageBuf = new double[messageLength];
 
-	do {
-		maxConverg = 0.0;
+	// Флаг, который показывает, что нужно продолжать вычисления 
+	char loopFlag = 1;
+
+	while (loopFlag) {
+		// 
+		maxLocalConverg = 0.0;
 
 		// Сначала вычисляем граничные значения
 		// При i = 1
@@ -183,23 +222,25 @@ void jacobi(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerPr
 				currentDestPtr[1][j][k] *= c;
 
 				// Сходимость для данного узла
-				localConverg = abs(currentDestPtr[1][j][k] - currentSourcePtr[1][j][k]);
-				if (localConverg > maxConverg) {
-					maxConverg = localConverg;
+				currConverg = abs(currentDestPtr[1][j][k] - currentSourcePtr[1][j][k]);
+				if (currConverg > maxLocalConverg) {
+					maxLocalConverg = currConverg;
 				}
 			}
 		}
 
+		// Если процесс должен отправить свой крайний слой с младшим значением x (не содержит слоя с x = 0)
 		if (lowerProcRank != -1) {
 			for (int j = 0; j < Ny - 2; j++) {
 				for (int k = 0; k < Nz - 2; k++) {
 					messageBuf[(Ny - 2) * j + k] = currentDestPtr[1][j + 1][k + 1];
 				}
 			}
-
+			// Отправляем слой младшему процессу
 			MPI_Send((void*)messageBuf, messageLength, MPI_DOUBLE, lowerProcRank, UPPER_BOUND_TAG, MPI_COMM_WORLD);
 		}
 
+		// Вычисляем граничные значения
 		// При i = xLength - 2
 		for (int j = 1; j < Ny - 1; j++) {
 			for (int k = 1; k < Nz - 1; k++) {
@@ -217,20 +258,21 @@ void jacobi(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerPr
 				currentDestPtr[xLocalLength - 2][j][k] *= c;
 
 				// Сходимость для данного узла
-				localConverg = abs(currentDestPtr[xLocalLength - 2][j][k] - currentSourcePtr[xLocalLength - 2][j][k]);
-				if (localConverg > maxConverg) {
-					maxConverg = localConverg;
+				currConverg = abs(currentDestPtr[xLocalLength - 2][j][k] - currentSourcePtr[xLocalLength - 2][j][k]);
+				if (currConverg > maxLocalConverg) {
+					maxLocalConverg = currConverg;
 				}
 			}
 		}
 
+		// Если процесс должен отправить свой крайний слой со старшим значением x (не содержит слоя с x = Nx - 1)
 		if (upperProcRank != -1) {
 			for (int j = 0; j < Ny - 2; j++) {
 				for (int k = 0; k < Nz - 2; k++) {
 					messageBuf[(Ny - 2) * j + k] = currentDestPtr[xLocalLength - 2][j + 1][k + 1];
 				}
 			}
-
+			// Отправляем слой старшему процессу
 			MPI_Send((void*)messageBuf, messageLength, MPI_DOUBLE, upperProcRank, LOWER_BOUND_TAG, MPI_COMM_WORLD);
 		}
 
@@ -253,14 +295,16 @@ void jacobi(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerPr
 					currentDestPtr[i][j][k] *= c;
 
 					// Сходимость для данного узла
-					localConverg = abs(currentDestPtr[i][j][k] - currentSourcePtr[i][j][k]);
-					if (localConverg > maxConverg) {
-						maxConverg = localConverg;
+					currConverg = abs(currentDestPtr[i][j][k] - currentSourcePtr[i][j][k]);
+					if (currConverg > maxLocalConverg) {
+						maxLocalConverg = currConverg;
 					}
 
 				}
 			}
 		}
+
+		// Если процесс должен получить слой соседнего процесса для просчёта своего слоя с младшим значением x (не содержит слоя с x = 0)
 		if (lowerProcRank != -1) {
 			MPI_Recv((void*)messageBuf, messageLength, MPI_DOUBLE, lowerProcRank, LOWER_BOUND_TAG, MPI_COMM_WORLD, &status);
 			for (int j = 0; j < Ny - 2; j++) {
@@ -269,8 +313,8 @@ void jacobi(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerPr
 				}
 			}
 		}
-		cout << "heh" << endl;
 
+		// Если процесс должен получить слой соседнего процесса для просчёта своего слоя со старшим значением x (не содержит слоя с x = Nx - 1)
 		if (upperProcRank != -1) {
 			MPI_Recv((void*)messageBuf, messageLength, MPI_DOUBLE, upperProcRank, UPPER_BOUND_TAG, MPI_COMM_WORLD, &status);
 			for (int j = 0; j < Ny - 2; j++) {
@@ -280,16 +324,25 @@ void jacobi(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerPr
 			}
 		}
 
+		if(epsilon > maxLocalConverg) {
+			isEpsilonHigher = 0;
+		}
+		else {
+			isEpsilonHigher = 1;
+		}
+
+		// Применяем логичекую операцию ИЛИ над флагом сходимости между всеми процессами и помещаем результат во флаг цикла.
+		// Таким образом, цикл завершится, когда у всех процессов сходимость будет меньше, чем эпсилон
+		MPI_Reduce((void*)&isEpsilonHigher, (void*)&loopFlag, 1, MPI_CHAR, MPI_BOR, MAIN_PROC_RANK, MPI_COMM_WORLD);
+		MPI_Bcast((void*)&loopFlag, 1, MPI_CHAR, MAIN_PROC_RANK, MPI_COMM_WORLD);
+
 		// Меняем местами указатели на массив-источник и массив-приёмник
 		tmpPtr = currentSourcePtr;
 		currentSourcePtr = currentDestPtr;
 		currentDestPtr = tmpPtr;
-		cout << "lol" << endl;
 
-		break;
-
+		MPI_Barrier(MPI_COMM_WORLD);
 	}
-	while (maxConverg > epsilon);
 
 
 	// В итоге массив должен содержать значения последней итерации
@@ -305,18 +358,24 @@ void jacobi(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerPr
 
 int main(int argc, char** argv)
 {
-	//Количество процессов
+	// Количество процессов
 	int procCount;
 
-	// Ранг процесса
+	// Ранг текущего процесса
 	int myRank;
-	// Ранг процесса, который содержит значения с меньшей координатой по оси x
+
+	// Ранг младшего процесса для текущего
+	// (Содержит слой, который необходим для просчёта локального слоя с младшим по x значением)
+	// Если -1, то такого процесса нет
 	int myLowerProcRank;
-	// Ранг процесса, который содержит значения с большей координатой по оси x
+	// Ранг старшего процесса для текущего
+	// (Содержит слой, который необходим для просчёта локального слоя со старшим по x значением)
+	// Если -1, то такого процесса нет
 	int myUpperProcRank;
 
-	// Границы обрабатываемой процессом области
+	// Глобальный индекс по x, с которого начинается область текущего процесса (включительно)
 	int xMyLocalStartIndx;
+	// Глобальный индекс по x, на котором заканчивается область текущего процесса (включительно)
 	int xMyLocalEndIndx;
 
 	// Статус возврата
@@ -326,13 +385,24 @@ int main(int argc, char** argv)
 	MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 	MPI_Comm_size(MPI_COMM_WORLD, &procCount);
 
+	// Если процессов больше, чем внутренних слоёв
+	if (procCount > (Nx - 2)) {
+		if (myRank == MAIN_PROC_RANK) {
+			cout << "Too many processes!" << endl;
+		}
+
+		MPI_Abort(MPI_COMM_WORLD, 0);
+	}
+
 	if (myRank == MAIN_PROC_RANK) {
 		cout << "Main process start send initial data..." << endl;
 
 		int integerPart = (Nx - 2) / procCount;
 		int remainder   = (Nx - 2) % procCount;
 
+		// Размер партии (сразу вычисляем для главного процесса)
 		int batchSize = integerPart + ((myRank < remainder) ? 1 : 0);
+
 
 		myLowerProcRank = -1;
 		myUpperProcRank = procCount == 1 ? -1 : 1;
@@ -340,12 +410,17 @@ int main(int argc, char** argv)
 		xMyLocalStartIndx = 1;
 		xMyLocalEndIndx = xMyLocalStartIndx + batchSize - 1;
 
+		// Младший процесс, для процесса-получателя
 		int lowerProcRank;
+		// Старший процесс, для процесса-получателя
 		int upperProcRank;
 
+		// Начало области для процесса-получателя
 		int xLocalStartIndx = 1;
+		// Конец области для процесса-получателя
 		int xLocalEndIndx;
 
+		// Рассылаем всем процессам необходимую информацию
 		for (int destRank = 1; destRank < procCount; destRank++) {
 			lowerProcRank = destRank - 1;
 			MPI_Send((void*)&lowerProcRank, 1, MPI_INT, destRank, LOWER_PROC_RANK_TAG, MPI_COMM_WORLD);
@@ -358,12 +433,13 @@ int main(int argc, char** argv)
 			batchSize = integerPart + ((destRank < remainder) ? 1 : 0);
 
 			MPI_Send((void*)&xLocalStartIndx, 1, MPI_INT, destRank, X_LOCAL_START_TAG, MPI_COMM_WORLD);
-
+		
 			xLocalEndIndx = xLocalStartIndx + batchSize - 1;
 			MPI_Send((void*)&xLocalEndIndx, 1, MPI_INT, destRank, X_LOCAL_END_TAG, MPI_COMM_WORLD);
 		}
 	}
 	else {
+		// Остальные процессы получают от главного необходимую информацию
 		MPI_Recv((void*)&myLowerProcRank, 1, MPI_INT, MAIN_PROC_RANK, LOWER_PROC_RANK_TAG, MPI_COMM_WORLD, &status);
 		MPI_Recv((void*)&myUpperProcRank, 1, MPI_INT, MAIN_PROC_RANK, UPPER_PROC_RANK_TAG, MPI_COMM_WORLD, &status);
 
@@ -384,15 +460,20 @@ int main(int argc, char** argv)
 	}
 
 	if (myRank == MAIN_PROC_RANK) {
-		cout << "Main process finish send initial data." << endl;
+		cout << "Main process finish sends initial data." << endl;
 	}
 
+	// Длина области текущего процесса
 	int xMyLocalLength = xMyLocalEndIndx - xMyLocalStartIndx + 1;
+	// Добавляем два слоя, которые вычисляют соседние процессы, чтобы производить сво вычисления на крайних слоях
+	// (либо это константные значения внешних слоёв, если таковых процессов нет)
 	xMyLocalLength += 2;
 
+	// Инициализируем решётку
 	double*** myGrid;
 	initGrid(myGrid, xMyLocalLength, toReal(xStart, hx, xMyLocalStartIndx - 1));
 	
+	// Если процесс содержит первый внешний слой, где x - const (x = 0)
 	if (myRank == MAIN_PROC_RANK) {
 		// Записываем краевые значения
 		// При i = 0
@@ -403,7 +484,9 @@ int main(int argc, char** argv)
 		}
 	}
 
+	// Если процесс содержит второй внешний слой, где x - const (x = xMyLocalLength - 1)
 	if (myRank == procCount - 1) {
+		// Записываем краевые значения
 		// При i = Nx - 1 
 		for (int j = 1; j < Ny - 1; j++) {
 			for (int k = 1; k < Nz - 1; k++) {
@@ -411,13 +494,25 @@ int main(int argc, char** argv)
 			}
 		}
 	}
-	cout << "Local grid calculation finished." << endl;
-
-	jacobi(myGrid, xMyLocalLength, xMyLocalStartIndx, myLowerProcRank, myUpperProcRank);
 
 	for (int i = 0; i < procCount; i++) {
+		if (myRank == i) {
+			cout << "Process " << myRank << " finish grid initialization." << endl;
+		}
+		MPI_Barrier(MPI_COMM_WORLD);
+	}
+
+	if (myRank == MAIN_PROC_RANK) {
+		cout << "Calculation..." << endl;
+	}
+
+	// Производим вычисления по методу Якоби
+	jacobiMPI(myGrid, xMyLocalLength, xMyLocalStartIndx, myLowerProcRank, myUpperProcRank);
+
+	// Последовательно выводим значения подобластей каждого процесса
+	for (int i = 0; i < procCount; i++) {
 		if (i == myRank) {
-			cout << "========================================" << endl;
+			cout << "====================================================" << endl;
 			cout << "Proc rank: " << myRank << endl;
 			cout << "Proc local grid:" << endl;
 
@@ -436,5 +531,13 @@ int main(int argc, char** argv)
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 
+	// Считаем общую точность
+	double precsision = getPrecisionMPI(myGrid, xMyLocalLength, toReal(xStart, hx, xMyLocalStartIndx - 1), MAIN_PROC_RANK);
+	if (myRank == MAIN_PROC_RANK) {
+		cout << endl << "Precsicion = " << precsision << endl;
+	}
+
 	MPI_Finalize();
+
+	deleteGrid(myGrid, xMyLocalLength);
 }
