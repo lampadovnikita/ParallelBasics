@@ -252,20 +252,25 @@ void jacobiMPI(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowe
 			for (int j = 1; j < Ny - 1; j++) {
 				for (int k = 1; k < Nz - 1; k++) {
 					// Первая дробь в скобках
-					currentDestPtr[xLocalLength - 2][j][k] = (currentSourcePtr[xLocalLength - 1][j][k] + currentSourcePtr[xLocalLength - 3][j][k]) / hx2;
+					currentDestPtr[xLocalLength - 2][j][k] = (currentSourcePtr[xLocalLength - 1][j][k] +
+						currentSourcePtr[xLocalLength - 3][j][k]) / hx2;
 
 					// Вторая дробь в скобках
-					currentDestPtr[xLocalLength - 2][j][k] += (currentSourcePtr[xLocalLength - 2][j + 1][k] + currentSourcePtr[xLocalLength - 2][j - 1][k]) / hy2;
+					currentDestPtr[xLocalLength - 2][j][k] += (currentSourcePtr[xLocalLength - 2][j + 1][k] +
+						currentSourcePtr[xLocalLength - 2][j - 1][k]) / hy2;
 
 					// Третья дробь в скобках
-					currentDestPtr[xLocalLength - 2][j][k] += (currentSourcePtr[xLocalLength - 2][j][k + 1] + currentSourcePtr[xLocalLength - 2][j][k - 1]) / hz2;
+					currentDestPtr[xLocalLength - 2][j][k] += (currentSourcePtr[xLocalLength - 2][j][k + 1] +
+						currentSourcePtr[xLocalLength - 2][j][k - 1]) / hz2;
 
 					// Остальная часть вычисления нового значения для данного узла
 					currentDestPtr[xLocalLength - 2][j][k] -= rho(currentSourcePtr[xLocalLength - 2][j][k]);
 					currentDestPtr[xLocalLength - 2][j][k] *= c;
 
 					// Сходимость для данного узла
-					currConverg = abs(currentDestPtr[xLocalLength - 2][j][k] - currentSourcePtr[xLocalLength - 2][j][k]);
+					currConverg = abs(currentDestPtr[xLocalLength - 2][j][k] -
+						currentSourcePtr[xLocalLength - 2][j][k]);
+					
 					if (currConverg > maxLocalConverg) {
 						maxLocalConverg = currConverg;
 					}
@@ -312,7 +317,8 @@ void jacobiMPI(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowe
 			}
 		}
 
-		// Если процесс должен получить слой соседнего процесса для просчёта своего слоя с младшим значением x (не содержит слоя с x = 0)
+		// Если процесс должен получить слой соседнего процесса для просчёта своего слоя с младшим значением x
+		// (не содержит слоя с x = 0)
 		if (lowerProcRank != -1) {
 			MPI_Recv((void*)messageBuf, messageLength, MPI_DOUBLE, lowerProcRank, LOWER_BOUND_TAG, MPI_COMM_WORLD, &status);
 			for (int j = 0; j < Ny - 2; j++) {
@@ -322,7 +328,8 @@ void jacobiMPI(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowe
 			}
 		}
 
-		// Если процесс должен получить слой соседнего процесса для просчёта своего слоя со старшим значением x (не содержит слоя с x = Nx - 1)
+		// Если процесс должен получить слой соседнего процесса для просчёта своего слоя со старшим значением x
+		// (не содержит слоя с x = Nx - 1)
 		if (upperProcRank != -1) {
 			MPI_Recv((void*)messageBuf, messageLength, MPI_DOUBLE, upperProcRank, UPPER_BOUND_TAG, MPI_COMM_WORLD, &status);
 			for (int j = 0; j < Ny - 2; j++) {
