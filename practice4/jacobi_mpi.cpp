@@ -153,11 +153,6 @@ double getPrecisionMPI(double*** grid, int xLocalLength, double xLocalStart, int
 
 void jacobiMPI(double*** &grid1, int xLocalLength, int xLocalStartIndx, int lowerProcRank, int upperProcRank)
 {
-	int rank;
-	int size;
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &size);
-
 	MPI_Status status;
 
 	// Значение сходимости для некоторого узла сетки
