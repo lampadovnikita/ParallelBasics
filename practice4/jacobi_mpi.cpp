@@ -491,7 +491,7 @@ int main(int argc, char** argv)
 	initGrid(myGrid, xMyLocalLength, toReal(xStart, hx, xMyLocalStartIndx - 1));
 	
 	// Если процесс содержит первый внешний слой, где x - const (x = xStart)
-	if (myRank == MAIN_PROC_RANK) {
+	if (myLowerProcRank == -1) {
 		// Записываем краевые значения
 		// При i = xStart
 		for (int j = 1; j < Ny - 1; j++) {
@@ -502,7 +502,7 @@ int main(int argc, char** argv)
 	}
 
 	// Если процесс содержит второй внешний слой, где x - const (x = xEnd)
-	if (myRank == procCount - 1) {
+	if (myUpperProcRank == -1) {
 		// Записываем краевые значения
 		// При i = xEnd 
 		for (int j = 1; j < Ny - 1; j++) {
