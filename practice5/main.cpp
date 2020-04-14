@@ -12,8 +12,8 @@
 using namespace std;
 using namespace cl;
 
-const int image_width = 2048;
-const int image_height = 2048;
+const int image_width = 1024;
+const int image_height = 1024;
 
 cl_float4* cpu_output;
 CommandQueue queue;
@@ -322,8 +322,6 @@ void main()
 	std::size_t global_work_size = image_width * image_height;
 	// Указываем число рабочих групп
 	std::size_t local_work_size = pickWorkGroupSize(device);
-
-	cout << "Kernel work group size: " << local_work_size << endl;
 
 	// Нужно чтобы глобальное число потоков нацело делилось на размер рабочей группы
 	if (global_work_size % local_work_size != 0)
