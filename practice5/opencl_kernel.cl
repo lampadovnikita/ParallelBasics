@@ -1,4 +1,4 @@
-п»ї__constant float EPSILON = 0.00003f;
+__constant float EPSILON = 0.00003f;
 __constant float PI = 3.14159265359f;
 __constant int SAMPLES = 128;
 
@@ -14,7 +14,7 @@ typedef struct Sphere{
 	float3 emission;
 } Sphere;
 
-/* РџРѕР»СѓС‡Р°РµРј РїСЃРµРІРґРѕСЃР»СѓС‡Р°Р№РЅРѕРµ С‡РёСЃР»Рѕ РїРѕ РґРІСѓРј Р°СЂРіСѓРјРµРЅС‚Р°Рј */
+/* Получаем псевдослучайное число по двум аргументам */
 static float get_random(unsigned int *seed1, unsigned int *seed2) {
 	*seed1 = 36969 * ((*seed1) & 65535) + ((*seed1) >> 16);  
 	*seed2 = 18000 * ((*seed2) & 65535) + ((*seed2) >> 16);
@@ -30,10 +30,10 @@ static float get_random(unsigned int *seed1, unsigned int *seed2) {
 	return (res.f - 2.0f) / 2.0f;
 }
 
-/* РЎРѕР·РґР°С‘Рј РІРµРєС‚РѕСЂ РёР· РєР°РјРµСЂС‹, РЅР°РїСЂР°РІР»РµРЅРЅС‹Р№ РІ Р·Р°РґР°РЅРЅС‹Р№ РїРёРєСЃРµР»СЊ */
+/* Создаём вектор из камеры, направленный в заданный пиксель */
 Ray createCamRay(const int x_coord, const int y_coord, const int width, const int height){
 	
-	/* РљРѕРЅРІРµСЂС‚РёСЂСѓРµРј С†РµР»РѕРµ С‡РёСЃР»Рѕ РєРѕРѕСЂРґРёРЅР°С‚С‹ РІ РІРµС‰РµСЃС‚РІРµРЅРЅРѕРµ С‡РёСЃР»Рѕ [0, 1] */
+	/* Конвертируем целое число координаты в вещественное число [0, 1] */
 	float fx = (float)x_coord / (float)width;
 	float fy = (float)y_coord / (float)height;
 
@@ -41,17 +41,17 @@ Ray createCamRay(const int x_coord, const int y_coord, const int width, const in
 	float fx2 = (fx - 0.5f) * aspect_ratio;
 	float fy2 = fy - 0.5f;
 
-	/* РћРїСЂРµРґРµР»СЏРµРј РїРѕР·РёС†РёСЋ РїРёРєСЃРµР»СЏ РЅР° СЌРєСЂР°РЅРµ */
+	/* Определяем позицию пикселя на экране */
 	float3 pixel_pos = (float3)(fx2, -fy2, 0.0f);
 
 	Ray ray;
-	ray.origin = (float3)(0.0f, 0.1f, 2.0f); /* Р¤РёРєСЃРёСЂРѕРІР°РЅРЅР°СЏ РїРѕР·РёС†РёСЏ РєР°РјРµСЂС‹ */
+	ray.origin = (float3)(0.0f, 0.1f, 2.0f); /* Фиксированная позиция камеры */
 	ray.dir = normalize(pixel_pos - ray.origin);
 
 	return ray;
 }
 
-/* Р Р°СЃСЃС‚РѕСЏРЅРёРµ РѕС‚ РёСЃС‚РѕРєР° Р»СѓС‡Р° РґРѕ РїРѕРІРµСЂС…РЅРѕСЃС‚Рё СЃС„РµСЂС‹ */
+/* Расстояние от истока луча до поверхности сферы */
 float intersect_sphere(const Sphere* sphere, const Ray* ray)
 {
 	float3 rayToCenter = sphere->pos - ray->origin;
@@ -68,7 +68,7 @@ float intersect_sphere(const Sphere* sphere, const Ray* ray)
 	return 0.0f;
 }
 
-/* РџРµСЂРµСЃРµРєР°РµС‚СЃСЏ Р»Рё Р»СѓС‡ СЃ РєР°РєРѕР№-Р»РёР±Рѕ СЃС„РµСЂРѕР№ РЅР° СЃС†РµРЅРµ*/
+/* Пересекается ли луч с какой-либо сферой на сцене*/
 bool intersect_scene(__constant Sphere* spheres, const Ray* ray, float* t, int* sphere_id, const int sphere_count)
 {
 	float inf = 1e20f;
@@ -89,7 +89,7 @@ bool intersect_scene(__constant Sphere* spheres, const Ray* ray, float* t, int* 
 	return *t < inf;
 }
 
-/* РўСЂР°СЃСЃРёСЂРѕРІРєР° РїСѓС‚Рё*/
+/* Трассировка пути*/
 float3 trace(__constant Sphere* spheres, const Ray* camray, const int sphere_count, const int* seed1, const int* seed2){
 
 	Ray ray = *camray;
@@ -98,25 +98,25 @@ float3 trace(__constant Sphere* spheres, const Ray* camray, const int sphere_cou
 	float3 mask = (float3)(1.0f, 1.0f, 1.0f);
 
 	for (int bounces = 0; bounces < 8; bounces++){
-		/* Р Р°СЃСЃС‚РѕСЏРЅРёРµ РґРѕ РїРµСЂРµСЃРµС‡РµРЅРёСЏ */
+		/* Расстояние до пересечения */
 		float t; 
-		/* РРЅРґРµРєСЃ СЃС„РµСЂС‹ СЃ РїРµСЂРµСЃРµС‡РµРЅРёРµРј*/
+		/* Индекс сферы с пересечением*/
 		int hitsphere_id = 0;
 
-		/* Р•СЃР»Рё Р»СѓС‡ РЅРµ СЃС‚РѕР»РєРЅСѓР»СЃСЏ РЅРё СЃ С‡РµРј, С‚Рѕ РІРѕР·РІСЂР°С‰Р°РµРј С†РІРµС‚ С„РѕРЅР° */
+		/* Если луч не столкнулся ни с чем, то возвращаем цвет фона */
 		if (!intersect_scene(spheres, &ray, &t, &hitsphere_id, sphere_count))
 			return accum_color += mask * (float3)(0.15f, 0.15f, 0.25f);
 
 		Sphere hitsphere = spheres[hitsphere_id];
 
-		/* Р’С‹С‡РёСЃР»СЏРµРј С‚РѕС‡РєСѓ СЃС‚РѕР»РєРЅРѕРІРµРЅРёСЏ */
+		/* Вычисляем точку столкновения */
 		float3 hitpoint = ray.origin + ray.dir * t;
 		
-		/* Р’С‹С‡РёСЃР»СЏРµРј РЅРѕСЂРјР°Р»СЊ Рє РїРѕРІРµСЂС…РЅРѕСЃС‚Рё Рё РїРѕРІРѕСЂР°С‡РёРІР°РµРј РІРµРєС‚РѕСЂ РЅР°РІСЃС‚СЂРµС‡Сѓ Р»СѓС‡Сѓ */
+		/* Вычисляем нормаль к поверхности и поворачиваем вектор навстречу лучу */
 		float3 normal = normalize(hitpoint - hitsphere.pos); 
 		float3 normal_facing = dot(normal, ray.dir) < 0.0f ? normal : normal * (-1.0f);
 
-		/* РЎР»СѓС‡Р°Р№РЅС‹Рµ С‡РёСЃР»Р° РґР»СЏ РЅРѕРІРѕРіРѕ РѕС‚СЃРєРѕРєР°*/
+		/* Случайные числа для нового отскока*/
 		float rand1 = 2.0f * PI * get_random(seed1, seed2);
 		float rand2 = get_random(seed1, seed2);
 		float rand2s = sqrt(rand2);
@@ -126,17 +126,17 @@ float3 trace(__constant Sphere* spheres, const Ray* camray, const int sphere_cou
 		float3 u = normalize(cross(axis, w));
 		float3 v = cross(w, u);
 
-		/* Р’С‹С‡РёСЃР»СЏРµРј РЅРѕРІРѕРµ РЅР°РїСЂР°РІР»РµРЅРёРµ */
+		/* Вычисляем новое направление */
 		float3 newdir = normalize(u * cos(rand1)*rand2s + v*sin(rand1)*rand2s + w*sqrt(1.0f - rand2));
 
-		/* Р”РѕР±Р°РІР»СЏРµРј РЅРµР±РѕР»СЊС€РѕР№ СЃРґРІРёРі, С‡С‚РѕР±С‹ РёР·Р±РµР¶Р°С‚СЊ СЃС‚РѕР»РєРЅРѕРІРµРЅРёСЏ СЃ СЌС‚РѕР№ Р¶Рµ РїРѕРІРµСЂС…РЅРѕСЃС‚СЊСЋ */
+		/* Добавляем небольшой сдвиг, чтобы избежать столкновения с этой же поверхностью */
 		ray.origin = hitpoint + normal_facing * EPSILON;
 		ray.dir = newdir;
 
-		/* Р’С‹С‡РёСЃР»РµРЅРёСЏ С†РІРµС‚Р° */
+		/* Вычисления цвета */
 		accum_color += mask * hitsphere.emission; 
 
-		/* РњРµРЅСЏРµРј РјР°СЃРєСѓ */
+		/* Меняем маску */
 		mask *= hitsphere.color; 
 		mask *= dot(newdir, normal_facing); 
 	}
@@ -148,7 +148,7 @@ __kernel void render_kernel(__constant Sphere* spheres, const int width, const i
 	const unsigned int seed1, const unsigned int seed2, __global float3* output)
 {
 
-	unsigned int work_item_id = get_global_id(0);	/* РЈРЅРёРєР°Р»СЊРЅС‹Р№ РіР»РѕР±Р°Р»СЊРЅС‹Р№ ID РґР»СЏ РґР°РЅРЅРѕРіРѕ РїРёРєСЃРµР»СЏ*/
+	unsigned int work_item_id = get_global_id(0);	/* Уникальный глобальный ID для данного пикселя*/
 
 	if (work_item_id >= width * height) {
 		return;
@@ -157,19 +157,19 @@ __kernel void render_kernel(__constant Sphere* spheres, const int width, const i
 	unsigned int x_coord = work_item_id % width;
 	unsigned int y_coord = work_item_id / width;
 	
-	/* Р”Р»СЏ РіРµРЅРµСЂР°С†РёРё СЃР»СѓС‡Р°Р№РЅС‹С… С‡РёСЃРµР» */
+	/* Для генерации случайных чисел */
 	unsigned int saltSeed1 = seed1 + x_coord;
 	unsigned int saltSeed2 = seed2 + y_coord;
 
 	Ray camray = createCamRay(x_coord, y_coord, width, height);
 
-	/* РЈС‡РёС‚С‹РІР°РµРј С†РІРµС‚ РєР°Р¶РґРѕРіРѕ РїСѓС‚Рё РґР»СЏ Р·Р°РґР°РЅРЅРѕРіРѕ РїРёРєСЃРµР»СЏ*/
+	/* Учитываем цвет каждого пути для заданного пикселя*/
 	float3 finalcolor = (float3)(0.0f, 0.0f, 0.0f);
 	float invSamples = 1.0f / SAMPLES;
 
 	for (int i = 0; i < SAMPLES; i++)
 		finalcolor += trace(spheres, &camray, sphere_count, &saltSeed1, &saltSeed2) * invSamples;
 
-	/* Р—Р°РїРёСЃС‹РІР°РµРј СЂРµР·СѓР»СЊС‚Р°С‚ С†РІРµС‚Р° РІ Р±СѓС„РµСЂ */
+	/* Записываем результат цвета в буфер */
 	output[work_item_id] = finalcolor;
 }
