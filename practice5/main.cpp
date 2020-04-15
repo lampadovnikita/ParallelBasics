@@ -1,4 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
+п»ї#define _CRT_SECURE_NO_WARNINGS
 #define CL_USE_DEPRECATED_OPENCL_2_0_APIS
 
 #include <iostream>
@@ -46,7 +46,7 @@ void pickPlatform(Platform& platform, const vector<Platform>& platforms)
 		cout << "\nChoose an OpenCL platform: ";
 		cin >> input;
 
-		// Обрабатываем некорректный ввод
+		// РћР±СЂР°Р±Р°С‚С‹РІР°РµРј РЅРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РІРІРѕРґ
 		while (input < 1 || input > platforms.size()) {
 			cin.clear();
 			cin.ignore(cin.rdbuf()->in_avail(), '\n');
@@ -66,7 +66,7 @@ void pickDevice(Device& device, const vector<Device>& devices)
 		cout << "\nChoose an OpenCL device: ";
 		cin >> input;
 
-		// Обрабатываем некорректный ввод
+		// РћР±СЂР°Р±Р°С‚С‹РІР°РµРј РЅРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РІРІРѕРґ
 		while (input < 1 || input > devices.size()) {
 			cin.clear();
 			cin.ignore(cin.rdbuf()->in_avail(), '\n');
@@ -83,7 +83,7 @@ void pickCPUCoreCount(Device& device)
 	cout << "\nChoose compute units count: ";
 	cin >> input;
 
-	// Обрабатываем некорректный ввод
+	// РћР±СЂР°Р±Р°С‚С‹РІР°РµРј РЅРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РІРІРѕРґ
 	while (input < 1 || input > device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()) {
 		cin.clear();
 		cin.ignore(cin.rdbuf()->in_avail(), '\n');
@@ -107,7 +107,7 @@ std::size_t pickWorkGroupSize(Device& device)
 	cout << "\nChoose work group size: ";
 	cin >> input;
 
-	// Обрабатываем некорректный ввод
+	// РћР±СЂР°Р±Р°С‚С‹РІР°РµРј РЅРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РІРІРѕРґ
 	while (input < 1 || input > device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>()) {
 		cin.clear();
 		cin.ignore(cin.rdbuf()->in_avail(), '\n');
@@ -122,11 +122,11 @@ std::size_t pickWorkGroupSize(Device& device)
 void printErrorLog(const Program& program, const Device& device)
 {
 
-	// Получаем логи ошибки и выводим в консоль
+	// РџРѕР»СѓС‡Р°РµРј Р»РѕРіРё РѕС€РёР±РєРё Рё РІС‹РІРѕРґРёРј РІ РєРѕРЅСЃРѕР»СЊ
 	string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
 	cerr << "Build log:" << std::endl << buildlog << std::endl;
 
-	// Записываем лог в файл
+	// Р—Р°РїРёСЃС‹РІР°РµРј Р»РѕРі РІ С„Р°Р№Р»
 	FILE* log = fopen("errorlog.txt", "w");
 	fprintf(log, "%s\n", buildlog);
 	cout << "Error log saved in 'errorlog.txt'" << endl;
@@ -136,19 +136,19 @@ void printErrorLog(const Program& program, const Device& device)
 
 void initOpenCL()
 {
-	// Получаем все доступные платформы для OpenCL
+	// РџРѕР»СѓС‡Р°РµРј РІСЃРµ РґРѕСЃС‚СѓРїРЅС‹Рµ РїР»Р°С‚С„РѕСЂРјС‹ РґР»СЏ OpenCL
 	vector<Platform> platforms;
 	Platform::get(&platforms);
 	cout << "Available OpenCL platforms : " << endl << endl;
 	for (int i = 0; i < platforms.size(); i++)
 		cout << "\t" << i + 1 << ": " << platforms[i].getInfo<CL_PLATFORM_NAME>() << endl;
 
-	// Выбираем одну из платформ
+	// Р’С‹Р±РёСЂР°РµРј РѕРґРЅСѓ РёР· РїР»Р°С‚С„РѕСЂРј
 	Platform platform;
 	pickPlatform(platform, platforms);
 	cout << "\nUsing OpenCL platform: \t" << platform.getInfo<CL_PLATFORM_NAME>() << endl;
 
-	// Получаем доступные устройства
+	// РџРѕР»СѓС‡Р°РµРј РґРѕСЃС‚СѓРїРЅС‹Рµ СѓСЃС‚СЂРѕР№СЃС‚РІР°
 	vector<Device> devices;
 	platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
@@ -159,7 +159,7 @@ void initOpenCL()
 		cout << "\t\tMax work group size: " << devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << endl << endl;
 	}
 
-	// Выбираем устройство
+	// Р’С‹Р±РёСЂР°РµРј СѓСЃС‚СЂРѕР№СЃС‚РІРѕ
 	pickDevice(device, devices);
 	cout << "\nUsing OpenCL device: \t" << device.getInfo<CL_DEVICE_NAME>() << endl;
 	cout << "\t\t\tMax compute units: " << device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << endl;
@@ -169,11 +169,11 @@ void initOpenCL()
 		pickCPUCoreCount(device);
 	}
 
-	// Создаём контекст OpenCL и очередь команд 
+	// РЎРѕР·РґР°С‘Рј РєРѕРЅС‚РµРєСЃС‚ OpenCL Рё РѕС‡РµСЂРµРґСЊ РєРѕРјР°РЅРґ 
 	context = Context(device);
 	queue = CommandQueue(context, device);
 
-	// Переводим OpenCL код в строку
+	// РџРµСЂРµРІРѕРґРёРј OpenCL РєРѕРґ РІ СЃС‚СЂРѕРєСѓ
 	string source;
 	ifstream file("opencl_kernel.cl");
 	if (!file) {
@@ -189,13 +189,13 @@ void initOpenCL()
 
 	const char* kernel_source = source.c_str();
 
-	// Создаём OpenCL программу, выполняя компиляцию для выбранного устройства
+	// РЎРѕР·РґР°С‘Рј OpenCL РїСЂРѕРіСЂР°РјРјСѓ, РІС‹РїРѕР»РЅСЏСЏ РєРѕРјРїРёР»СЏС†РёСЋ РґР»СЏ РІС‹Р±СЂР°РЅРЅРѕРіРѕ СѓСЃС‚СЂРѕР№СЃС‚РІР°
 	program = Program(context, kernel_source);
 	cl_int result = program.build({ device });
 	if (result) cout << "Error during compilation OpenCL code!!!\n (" << result << ")" << endl;
 	if (result == CL_BUILD_PROGRAM_FAILURE) printErrorLog(program, device);
 
-	// Создаём входную точку программы OpenCL
+	// РЎРѕР·РґР°С‘Рј РІС…РѕРґРЅСѓСЋ С‚РѕС‡РєСѓ РїСЂРѕРіСЂР°РјРјС‹ OpenCL
 	kernel = Kernel(program, "render_kernel");
 }
 
@@ -209,7 +209,7 @@ inline float clamp(float x)
 	return x < 0.0f ? 0.0f : x > 1.0f ? 1.0f : x;
 }
 
-// Конвертируем RGB вещественные числа [0, 1] в целочисленный диапаон [0, 255] и выполняем гамма коррекцию
+// РљРѕРЅРІРµСЂС‚РёСЂСѓРµРј RGB РІРµС‰РµСЃС‚РІРµРЅРЅС‹Рµ С‡РёСЃР»Р° [0, 1] РІ С†РµР»РѕС‡РёСЃР»РµРЅРЅС‹Р№ РґРёР°РїР°РѕРЅ [0, 255] Рё РІС‹РїРѕР»РЅСЏРµРј РіР°РјРјР° РєРѕСЂСЂРµРєС†РёСЋ
 inline int toInt(float x)
 {
 	return int(clamp(x) * 255 + .5);
@@ -230,55 +230,55 @@ void saveImage()
 void initScene(Sphere* cpu_spheres)
 {
 
-	// Левая стена
+	// Р›РµРІР°СЏ СЃС‚РµРЅР°
 	cpu_spheres[0].radius = 200.0f;
 	cpu_spheres[0].position = { -200.6f, 0.0f, 0.0f };
 	cpu_spheres[0].color = { 0.75f, 0.25f, 0.25f };
 	cpu_spheres[0].emission = { 0.0f, 0.0f, 0.0f };
 
-	// Правая стена
+	// РџСЂР°РІР°СЏ СЃС‚РµРЅР°
 	cpu_spheres[1].radius = 200.0f;
 	cpu_spheres[1].position = { 200.6f, 0.0f, 0.0f };
 	cpu_spheres[1].color = { 0.25f, 0.25f, 0.75f };
 	cpu_spheres[1].emission = { 0.0f, 0.0f, 0.0f };
 
-	// Пол
+	// РџРѕР»
 	cpu_spheres[2].radius = 200.0f;
 	cpu_spheres[2].position = { 0.0f, -200.4f, 0.0f };
 	cpu_spheres[2].color = { 0.71f, 0.45f, 0.23f };
 	cpu_spheres[2].emission = { 0.0f, 0.0f, 0.0f };
 
-	// Потолок
+	// РџРѕС‚РѕР»РѕРє
 	cpu_spheres[3].radius = 200.0f;
 	cpu_spheres[3].position = { 0.0f, 200.49f, 0.0f };
 	cpu_spheres[3].color = { 0.9f, 0.8f, 0.7f };
 	cpu_spheres[3].emission = { 0.0f, 0.0f, 0.0f };
 
-	// Задняя стена
+	// Р—Р°РґРЅСЏСЏ СЃС‚РµРЅР°
 	cpu_spheres[4].radius = 200.0f;
 	cpu_spheres[4].position = { 0.0f, 0.0f, -200.36f };
 	cpu_spheres[4].color = { 0.13f, 0.68f, 0.36f };
 	cpu_spheres[4].emission = { 0.0f, 0.0f, 0.0f };
 
-	// Передняя стена
+	// РџРµСЂРµРґРЅСЏСЏ СЃС‚РµРЅР°
 	cpu_spheres[5].radius = 200.0f;
 	cpu_spheres[5].position = { 0.0f, 0.0f, 202.0f };
 	cpu_spheres[5].color = { 0.13f, 0.68f, 0.36f };
 	cpu_spheres[5].emission = { 0.0f, 0.0f, 0.0f };
 
-	// Левая сфера
+	// Р›РµРІР°СЏ СЃС„РµСЂР°
 	cpu_spheres[6].radius = 0.16f;
 	cpu_spheres[6].position = { -0.25f, -0.24f, -0.1f };
 	cpu_spheres[6].color = { 0.9f, 0.8f, 0.7f };
 	cpu_spheres[6].emission = { 0.0f, 0.0f, 0.0f };
 
-	// Правая сфера
+	// РџСЂР°РІР°СЏ СЃС„РµСЂР°
 	cpu_spheres[7].radius = 0.16f;
 	cpu_spheres[7].position = { 0.25f, -0.24f, 0.2f };
 	cpu_spheres[7].color = { 0.9f, 0.8f, 0.7f };
 	cpu_spheres[7].emission = { 0.0f, 0.0f, 0.0f };
 
-	// Источник света
+	// РСЃС‚РѕС‡РЅРёРє СЃРІРµС‚Р°
 	cpu_spheres[8].radius = 1.0f;
 	cpu_spheres[8].position = { 0.0f, 1.43f, 0.0f };
 	cpu_spheres[8].color = { 0.0f, 0.0f, 0.0f };
@@ -294,20 +294,20 @@ void main()
 
 	initOpenCL();
 
-	// Выделяем память для будущего изображения
+	// Р’С‹РґРµР»СЏРµРј РїР°РјСЏС‚СЊ РґР»СЏ Р±СѓРґСѓС‰РµРіРѕ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
 	cpu_output = new cl_float3[image_width * image_height];
 
-	// Инициализируем сцену
+	// РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЃС†РµРЅСѓ
 	const int sphere_count = 9;
 	Sphere cpu_spheres[sphere_count];
 	initScene(cpu_spheres);
 
-	// Создаём буферы для устройства, которое будет выполнять вычисления
+	// РЎРѕР·РґР°С‘Рј Р±СѓС„РµСЂС‹ РґР»СЏ СѓСЃС‚СЂРѕР№СЃС‚РІР°, РєРѕС‚РѕСЂРѕРµ Р±СѓРґРµС‚ РІС‹РїРѕР»РЅСЏС‚СЊ РІС‹С‡РёСЃР»РµРЅРёСЏ
 	cl_output = Buffer(context, CL_MEM_WRITE_ONLY, image_width * image_height * sizeof(cl_float3));
 	cl_spheres = Buffer(context, CL_MEM_READ_ONLY, sphere_count * sizeof(Sphere));
 	queue.enqueueWriteBuffer(cl_spheres, CL_TRUE, 0, sphere_count * sizeof(Sphere), cpu_spheres);
 
-	// Указываем аргументы для OpenCL программы
+	// РЈРєР°Р·С‹РІР°РµРј Р°СЂРіСѓРјРµРЅС‚С‹ РґР»СЏ OpenCL РїСЂРѕРіСЂР°РјРјС‹
 	kernel.setArg(0, cl_spheres);
 	kernel.setArg(1, image_width);
 	kernel.setArg(2, image_height);
@@ -316,12 +316,12 @@ void main()
 	kernel.setArg(5, seed2);
 	kernel.setArg(6, cl_output);
 
-	// Каждый пиксель просчитывается в отдельном потоке 
+	// РљР°Р¶РґС‹Р№ РїРёРєСЃРµР»СЊ РїСЂРѕСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ РІ РѕС‚РґРµР»СЊРЅРѕРј РїРѕС‚РѕРєРµ 
 	std::size_t global_work_size = image_width * image_height;
-	// Указываем число рабочих групп
+	// РЈРєР°Р·С‹РІР°РµРј С‡РёСЃР»Рѕ СЂР°Р±РѕС‡РёС… РіСЂСѓРїРї
 	std::size_t local_work_size = pickWorkGroupSize(device);
 
-	// Нужно чтобы глобальное число потоков нацело делилось на размер рабочей группы
+	// РќСѓР¶РЅРѕ С‡С‚РѕР±С‹ РіР»РѕР±Р°Р»СЊРЅРѕРµ С‡РёСЃР»Рѕ РїРѕС‚РѕРєРѕРІ РЅР°С†РµР»Рѕ РґРµР»РёР»РѕСЃСЊ РЅР° СЂР°Р·РјРµСЂ СЂР°Р±РѕС‡РµР№ РіСЂСѓРїРїС‹
 	if (global_work_size % local_work_size != 0)
 		global_work_size = (global_work_size / local_work_size + 1) * local_work_size;
 
@@ -329,7 +329,7 @@ void main()
 
 	auto begin = chrono::steady_clock::now();
 
-	// Запускаем OpenCL
+	// Р—Р°РїСѓСЃРєР°РµРј OpenCL
 	queue.enqueueNDRangeKernel(kernel, NULL, global_work_size, local_work_size);
 	queue.finish();
 
@@ -341,7 +341,7 @@ void main()
 
 	cout << "Rendering done! \nCopying output from device to host" << endl;
 
-	// Считывем и копируем вывод из OpenCL
+	// РЎС‡РёС‚С‹РІРµРј Рё РєРѕРїРёСЂСѓРµРј РІС‹РІРѕРґ РёР· OpenCL
 	queue.enqueueReadBuffer(cl_output, CL_TRUE, 0, image_width * image_height * sizeof(cl_float3), cpu_output);
 
 	saveImage();
