@@ -33,9 +33,7 @@ struct Sphere
 	cl_float dummy3;
 
 	cl_float3 position;
-
 	cl_float3 color;
-
 	cl_float3 emission;
 };
 
