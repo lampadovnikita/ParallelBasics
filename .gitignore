@@ -3,3 +3,4 @@ a
 *.out
 *.txt
 *.ppm
+!.git/
