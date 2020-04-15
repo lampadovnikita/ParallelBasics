@@ -21,7 +21,6 @@ static float get_random(unsigned int *seed1, unsigned int *seed2) {
 
 	unsigned int ires = ((*seed1) << 16) + (*seed2);
 
-	/* use union struct to convert int to float */
 	union {
 		float f;
 		unsigned int ui;

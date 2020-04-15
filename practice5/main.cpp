@@ -284,7 +284,7 @@ void initScene(Sphere* cpu_spheres)
 	cpu_spheres[8].radius = 1.0f;
 	cpu_spheres[8].position = { 0.0f, 1.43f, 0.0f };
 	cpu_spheres[8].color = { 0.0f, 0.0f, 0.0f };
-	cpu_spheres[8].emission = {9.0f, 8.0f, 6.0f};
+	cpu_spheres[8].emission = { 9.0f, 8.0f, 6.0f };
 }
 
 void main()
